@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "android": {
+        "resourceClass": "default"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "resourceClass": "default",
+        "buildType": "apk"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "resourceClass": "default",
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    }
+  }
+}

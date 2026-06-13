@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Tefama",
+    "slug": "tefama-mobile",
+    "scheme": "tefama",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/branding/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0600"
+    },
+    "icon": "./assets/branding/app-icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/adaptive-icon.png",
+        "backgroundColor": "#0A0600"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.tefama.mobile"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tefama.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "owner": "tevinprime66"
+  }
+}
