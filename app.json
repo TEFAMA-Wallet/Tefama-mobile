@@ -9,13 +9,13 @@
     "splash": {
       "image": "./assets/branding/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0600"
+      "backgroundColor": "#0a0a0a"
     },
     "icon": "./assets/branding/app-icon.png",
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/adaptive-icon.png",
-        "backgroundColor": "#0A0600"
+        "backgroundColor": "#0a0a0a"
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
