@@ -4,23 +4,10 @@ import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
-
-export interface TxShape {
-  id:     string;
-  time:   string;
-  type:   "Buy" | "Sell";
-  pair:   string;
-  amount: string;
-  value:  string;
-  price:  string;
-  status: "confirmed" | "pending" | "failed";
-  gas:    string;
-  hash:   string;
-  agent:  string;
-}
+import type { Tx } from "../lib/data";
 
 interface Props {
-  tx:      TxShape | null;
+  tx:      Tx | null;
   onClose: () => void;
 }
 

@@ -5,17 +5,10 @@ import { CircularProgress } from "../components/CircularProgress";
 import { Badge } from "../components/Badge";
 import { SectionHead } from "../components/SectionHead";
 import { Button } from "../components/Button";
-import type { Agent } from "../lib/data";
+import type { Agent, Tx } from "../lib/data";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { VAULT_ID } from "../lib/constants";
-
-type Tx = {
-  id: string; time: string; type: "Buy" | "Sell"; pair: string;
-  amount: string; value: string; price: string;
-  status: "confirmed" | "pending" | "failed";
-  gas: string; hash: string; agent: string;
-};
 
 interface Props {
   agent:          Agent;

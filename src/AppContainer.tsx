@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { BottomNav }         from "./components/BottomNav";
-import { TxDetailModal, type TxShape } from "./screens/TxDetailModal";
+import { TxDetailModal }     from "./screens/TxDetailModal";
 import { SplashScreen }      from "./screens/SplashScreen";
 import { OnboardingScreen }  from "./screens/OnboardingScreen";
 import { ConnectScreen }     from "./screens/ConnectScreen";
@@ -16,7 +16,7 @@ import { AgentCreatedScreen }from "./screens/AgentCreatedScreen";
 import { useAuth }           from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
 import { VAULT_ID }          from "./lib/constants";
-import type { Agent }        from "./lib/data";
+import type { Agent, Tx }    from "./lib/data";
 import type { NavTab }       from "./components/BottomNav";
 
 type Screen =
@@ -26,17 +26,16 @@ type Screen =
 
 const TAB_SCREENS: NavTab[] = ["home", "agents", "activity", "settings"];
 
-// Adapts a live Trade into the legacy Tx shape the detail modal expects
-function tradeToTx(t: Trade) {
+function tradeToTx(t: Trade): Tx {
   return {
     id:     t.id,
     time:   t.time,
-    type:   "Buy" as const,
+    type:   "Buy",
     pair:   "DEEP / SUI",
     amount: `+${t.baseReceived.toFixed(3)} DEEP`,
     value:  `${t.quoteSpent.toFixed(4)} SUI`,
     price:  t.price.toFixed(6),
-    status: t.status as "confirmed" | "pending" | "failed",
+    status: t.status,
     gas:    "—",
     hash:   t.digest,
     agent:  "DCA Agent",
@@ -49,7 +48,7 @@ export function AppContainer() {
   const [screen,    setScreen]    = useState<Screen>("splash");
   const [tab,       setTab]       = useState<NavTab>("home");
   const [selAgent,  setSelAgent]  = useState<Agent | null>(null);
-  const [selTx,     setSelTx]     = useState<TxShape | null>(null);
+  const [selTx,     setSelTx]     = useState<Tx | null>(null);
   const [splashDone, setSplashDone] = useState(false);
 
   // Global data hooks — available to all screens
@@ -116,14 +115,24 @@ export function AppContainer() {
       break;
     case "home":
       content = <DashboardScreen
-        priceData={priceData}
-        walletData={walletData}
-        tradeData={tradeData}
+        price={priceData.price}
+        deepPrice={priceData.deepPrice}
+        change24h={priceData.change24h}
+        deepChange24h={priceData.deepChange24h}
+        priceLoading={priceData.loading}
+        suiBalance={walletData.suiBalance}
+        usdcBalance={walletData.usdcBalance}
+        deepBalance={walletData.deepBalance}
+        vault={walletData.vault}
+        walletLoading={walletData.loading}
+        trades={liveTxs}
+        tradeCount={tradeData.count}
+        tradePnl={tradeData.pnl}
+        tradeLoading={tradeData.loading}
         liveAgent={liveAgent}
         onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onViewAgents={() => go("agents")}
         onViewActivity={() => go("activity")}
-        onViewTx={(tx) => setSelTx(tx)}
+        onViewTx={setSelTx}
       />;
       break;
     case "agents":
@@ -137,7 +146,7 @@ export function AppContainer() {
       content = <ActivityScreen
         trades={liveTxs}
         loading={tradeData.loading}
-        onViewTx={(tx) => setSelTx(tx)}
+        onViewTx={setSelTx}
       />;
       break;
     case "settings":
@@ -150,7 +159,7 @@ export function AppContainer() {
         onBack={() => go("agents")}
         onRevoke={() => go("home")}
         onViewActivity={() => go("activity")}
-        onViewTx={(tx) => setSelTx(tx)}
+        onViewTx={setSelTx}
       />;
       break;
     case "templates":
@@ -173,14 +182,24 @@ export function AppContainer() {
       break;
     default:
       content = <DashboardScreen
-        priceData={priceData}
-        walletData={walletData}
-        tradeData={tradeData}
+        price={priceData.price}
+        deepPrice={priceData.deepPrice}
+        change24h={priceData.change24h}
+        deepChange24h={priceData.deepChange24h}
+        priceLoading={priceData.loading}
+        suiBalance={walletData.suiBalance}
+        usdcBalance={walletData.usdcBalance}
+        deepBalance={walletData.deepBalance}
+        vault={walletData.vault}
+        walletLoading={walletData.loading}
+        trades={liveTxs}
+        tradeCount={tradeData.count}
+        tradePnl={tradeData.pnl}
+        tradeLoading={tradeData.loading}
         liveAgent={liveAgent}
         onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onViewAgents={() => go("agents")}
         onViewActivity={() => go("activity")}
-        onViewTx={(tx) => setSelTx(tx)}
+        onViewTx={setSelTx}
       />;
   }
 

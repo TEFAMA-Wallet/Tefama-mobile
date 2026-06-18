@@ -9,7 +9,7 @@ import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { VAULT_ID } from "../lib/constants";
 
-interface Props {
+export interface Props {
   liveAgent:     Agent;
   onViewAgent:   () => void;
   onCreateAgent: () => void;

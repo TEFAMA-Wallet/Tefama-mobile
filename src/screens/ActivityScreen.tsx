@@ -4,13 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Badge } from "../components/Badge";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
-
-type Tx = {
-  id: string; time: string; type: "Buy" | "Sell"; pair: string;
-  amount: string; value: string; price: string;
-  status: "confirmed" | "pending" | "failed";
-  gas: string; hash: string; agent: string;
-};
+import type { Tx } from "../lib/data";
 
 type Filter = "All" | "Confirmed" | "Pending" | "Failed";
 const FILTERS: Filter[] = ["All", "Confirmed", "Pending", "Failed"];
