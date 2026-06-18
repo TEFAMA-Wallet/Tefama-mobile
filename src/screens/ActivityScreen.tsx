@@ -1,4 +1,5 @@
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -12,6 +13,7 @@ interface Props {
   onRefresh:() => void;
   onViewTx: (tx: Tx) => void;
   deepPrice:number;
+  bellEl?:  ReactNode;
 }
 
 function Skeleton({ w = 80, h = 14 }: { w?: number | string; h?: number }) {
@@ -24,7 +26,7 @@ function usd(n: number, d = 2) {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewTx, deepPrice }: Props) {
+export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewTx, deepPrice, bellEl }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
@@ -45,13 +47,16 @@ export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewT
           <Text style={[s.pageTitle, { color: colors.text }]}>Activity log</Text>
           <Text style={[s.pageSub, { color: colors.text2 }]}>All on-chain executions · Sui testnet</Text>
         </View>
-        <Pressable
-          onPress={onRefresh}
-          style={[s.refreshBtn, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}
-        >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+          {bellEl}
+          <Pressable
+            onPress={onRefresh}
+            style={[s.refreshBtn, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}
+          >
           <Ionicons name="refresh-outline" size={14} color={colors.text2} />
           <Text style={[s.refreshText, { color: colors.text2 }]}>Refresh</Text>
         </Pressable>
+        </View>
       </View>
 
       <ScrollView

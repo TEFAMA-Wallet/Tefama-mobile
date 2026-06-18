@@ -6,9 +6,9 @@ import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 
 const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
-  Easy:     { bg: "rgba(76,175,80,0.15)",  text: "#4CAF50" },
-  Advanced: { bg: "rgba(255,140,0,0.15)",  text: "#FF8C00" },
-  Custom:   { bg: "rgba(74,143,212,0.15)", text: "#4A8FD4" },
+  Easy:     { bg: "rgba(6,182,212,0.12)", text: "#06b6d4" },
+  Advanced: { bg: "rgba(6,182,212,0.20)", text: "#22d3ee" },
+  Custom:   { bg: "rgba(6,182,212,0.08)", text: "#67e8f9" },
 };
 
 export function TemplatesScreen({ onBack, onSelect }: { onBack: () => void; onSelect: () => void }) {

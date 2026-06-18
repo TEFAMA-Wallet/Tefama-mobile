@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -25,6 +26,7 @@ interface Props {
   onViewAgent:    () => void;
   onViewActivity: () => void;
   onViewTx:       (tx: Tx) => void;
+  bellEl?:        ReactNode;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -68,7 +70,7 @@ export function DashboardScreen({
   price, deepPrice, change24h, priceLoading,
   suiBalance, usdcBalance, deepBalance, vault, walletLoading,
   trades, tradeCount, tradePnl, tradeRoi, tradeLoading,
-  onViewAgent, onViewActivity, onViewTx,
+  onViewAgent, onViewActivity, onViewTx, bellEl,
 }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
@@ -90,10 +92,13 @@ export function DashboardScreen({
             {firstName ? `Welcome back, ${firstName}` : "Welcome back"} · live data from Sui testnet
           </Text>
         </View>
-        <Pressable style={[s.newAgentBtn, { backgroundColor: colors.accent }]} onPress={onViewAgent}>
-          <Ionicons name="add" size={15} color="#fff" />
-          <Text style={s.newAgentText}>New agent</Text>
-        </Pressable>
+        <View style={s.headerRight}>
+          {bellEl}
+          <Pressable style={[s.newAgentBtn, { backgroundColor: colors.accent }]} onPress={onViewAgent}>
+            <Ionicons name="add" size={15} color="#fff" />
+            <Text style={s.newAgentText}>New agent</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -228,7 +233,8 @@ const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
 
-  header:       { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  header:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  headerRight:  { flexDirection: "row", alignItems: "center", gap: 8 },
   pageTitle:    { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
   pageSub:      { fontSize: 13, marginTop: 2, lineHeight: 18 },
   newAgentBtn:  { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginTop: 2 },

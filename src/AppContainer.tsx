@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, StyleSheet }    from "react-native";
 import { BottomNav }            from "./components/BottomNav";
+import { NotificationBell }     from "./components/NotificationBell";
 import { TxDetailModal }        from "./screens/TxDetailModal";
 import { SplashScreen }         from "./screens/SplashScreen";
 import { ConnectScreen }        from "./screens/ConnectScreen";
@@ -17,6 +18,7 @@ import type { Tx, Agent }       from "./lib/data";
 import type { NavTab }          from "./components/BottomNav";
 import { useAuth }              from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
+import { useNotifications }     from "./lib/useNotifications";
 import { VAULT_ID }             from "./lib/constants";
 
 type Screen =
@@ -45,19 +47,23 @@ function tradeToTx(t: Trade): Tx {
 export function AppContainer() {
   const { session, isLoading: authLoading } = useAuth();
 
-  const [screen,    setScreen]    = useState<Screen>("splash");
-  const [tab,       setTab]       = useState<NavTab>("home");
-  const [selTx,     setSelTx]     = useState<Tx | null>(null);
-  const [splashDone,setSplashDone]= useState(false);
+  const [screen,     setScreen]    = useState<Screen>("splash");
+  const [tab,        setTab]       = useState<NavTab>("home");
+  const [selTx,      setSelTx]     = useState<Tx | null>(null);
+  const [splashDone, setSplashDone]= useState(false);
+  const [bellOpen,   setBellOpen]  = useState(false);
 
-  // All data hooks — active even before login (price is public)
+  // All data hooks
   const priceData  = usePrice();
   const walletData = useWallet(session?.address ?? null);
   const tradeData  = useTrades(VAULT_ID, priceData.deepPrice);
 
   const liveTxs = tradeData.trades.map(tradeToTx);
 
-  // Build agent from live vault
+  // Notifications — watches live trades + vault for events
+  const notifState = useNotifications(liveTxs, walletData.vault);
+
+  // Build live agent from vault data
   const vault = walletData.vault;
   const liveAgent: Agent = {
     id:          VAULT_ID,
@@ -78,9 +84,7 @@ export function AppContainer() {
 
   function handleSplashDone() {
     setSplashDone(true);
-    if (!authLoading) {
-      setScreen(session ? "home" : "connect");
-    }
+    if (!authLoading) setScreen(session ? "home" : "connect");
   }
 
   useEffect(() => {
@@ -100,6 +104,20 @@ export function AppContainer() {
     setTab(key);
     setScreen(key);
   }
+
+  // Notification bell component — passed to screens that need it in their header
+  const bellEl = (
+    <NotificationBell
+      notifs={notifState.notifs}
+      unread={notifState.unread}
+      open={bellOpen}
+      onOpen={() => setBellOpen(true)}
+      onClose={() => setBellOpen(false)}
+      onMarkAll={notifState.markAllRead}
+      onClear={notifState.clear}
+      onMarkRead={notifState.markRead}
+    />
+  );
 
   const commonDashProps = {
     price:         priceData.price,
@@ -121,6 +139,7 @@ export function AppContainer() {
     onViewAgent:    () => go("agent-detail"),
     onViewActivity: () => go("activity"),
     onViewTx:       setSelTx,
+    bellEl,
   };
 
   let content: React.ReactNode;
@@ -149,6 +168,7 @@ export function AppContainer() {
           vault={walletData.vault}
           walletLoading={walletData.loading}
           priceLoading={priceData.loading}
+          bellEl={bellEl}
         />
       );
       break;
@@ -163,6 +183,7 @@ export function AppContainer() {
           onRefresh={tradeData.refresh}
           onViewTx={setSelTx}
           deepPrice={priceData.deepPrice}
+          bellEl={bellEl}
         />
       );
       break;
@@ -186,12 +207,13 @@ export function AppContainer() {
           roi={tradeData.roi}
           count={tradeData.count}
           loading={priceData.loading || walletData.loading || tradeData.loading}
+          bellEl={bellEl}
         />
       );
       break;
 
     case "settings":
-      content = <SettingsScreen vault={walletData.vault} />;
+      content = <SettingsScreen vault={walletData.vault} bellEl={bellEl} />;
       break;
 
     case "agent-detail":
@@ -220,7 +242,10 @@ export function AppContainer() {
       content = (
         <CreateAgentScreen
           onBack={() => go("templates")}
-          onDone={() => go("created")}
+          onDone={() => {
+            notifState.addAgentTriggered();
+            go("created");
+          }}
         />
       );
       break;

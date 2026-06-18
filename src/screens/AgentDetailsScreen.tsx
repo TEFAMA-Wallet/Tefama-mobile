@@ -49,9 +49,9 @@ export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActi
 
         {/* Gradient hero */}
         <LinearGradient
-          colors={active ? ["#1C0A00", "#FF8C0016"] : ["#160C00", "#160C00"]}
+          colors={active ? ["#040d10", "rgba(6,182,212,0.10)"] : [colors.bg3, colors.bg3]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[s.heroCard, { borderColor: active ? "rgba(255,140,0,0.28)" : colors.border }]}
+          style={[s.heroCard, { borderColor: active ? "rgba(6,182,212,0.28)" : colors.border }]}
         >
           <View style={s.heroBadgeRow}>
             <Badge status={agent.status} />
@@ -77,7 +77,7 @@ export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActi
               ].map(({ label, val, accent, green }) => (
                 <View key={label} style={s.ringStat}>
                   <Text style={s.ringStatK}>{label}</Text>
-                  <Text style={[s.ringStatV, accent ? { color: "#FF8C00" } : green ? { color: "#4CAF50" } : {}]}>{val}</Text>
+                  <Text style={[s.ringStatV, accent ? { color: colors.accent } : green ? { color: colors.accent } : {}]}>{val}</Text>
                 </View>
               ))}
             </View>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
@@ -15,6 +16,7 @@ interface Props {
   vault:         Vault | null;
   walletLoading: boolean;
   priceLoading:  boolean;
+  bellEl?:       ReactNode;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -29,7 +31,7 @@ function usd(n: number, d = 2) {
 
 function shortAddr(a: string) { return `${a.slice(0, 8)}...${a.slice(-6)}`; }
 
-export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBalance, vault, walletLoading, priceLoading }: Props) {
+export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBalance, vault, walletLoading, priceLoading, bellEl }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session } = useAuth();
@@ -55,6 +57,7 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
     <View style={[s.root, { backgroundColor: colors.bg }]}>
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <Text style={[s.pageTitle, { color: colors.text }]}>Wallet</Text>
+        {bellEl}
         <Text style={[s.pageSub, { color: colors.text2 }]}>Your Sui wallet · zkLogin · Testnet</Text>
       </View>
 
@@ -157,7 +160,7 @@ const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
 
-  header:    { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
   pageSub:   { fontSize: 13, marginTop: 2 },
 

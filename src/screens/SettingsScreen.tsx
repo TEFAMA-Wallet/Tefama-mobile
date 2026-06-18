@@ -1,4 +1,5 @@
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -6,7 +7,7 @@ import { useAuth } from "../lib/AuthContext";
 import type { Vault } from "../lib/useOnchain";
 import { useState } from "react";
 
-interface Props { vault: Vault | null }
+interface Props { vault: Vault | null; bellEl?: ReactNode }
 
 function Toggle({ on }: { on: boolean }) {
   const { isDark } = useColorTheme();
@@ -54,7 +55,7 @@ function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) 
   );
 }
 
-export function SettingsScreen({ vault }: Props) {
+export function SettingsScreen({ vault, bellEl }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
@@ -79,6 +80,7 @@ export function SettingsScreen({ vault }: Props) {
     <View style={[s.root, { backgroundColor: colors.bg }]}>
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <Text style={[s.pageTitle, { color: colors.text }]}>Settings</Text>
+        {bellEl}
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -194,7 +196,7 @@ const sh = StyleSheet.create({
 const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
-  header:    { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
 
   profileCard: { borderRadius: 16, borderWidth: 1, padding: 20 },

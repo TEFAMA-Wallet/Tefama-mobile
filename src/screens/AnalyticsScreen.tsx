@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -22,6 +23,7 @@ interface Props {
   roi:          number;
   count:        number;
   loading:      boolean;
+  bellEl?:      ReactNode;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -70,7 +72,7 @@ function MarketRow({ label, value, change, loading: load }: { label: string; val
   );
 }
 
-export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, high24h, low24h, volume24h, suiBalance, usdcBalance, deepBalance, vault, trades, pnl, roi, count, loading }: Props) {
+export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, high24h, low24h, volume24h, suiBalance, usdcBalance, deepBalance, vault, trades, pnl, roi, count, loading, bellEl }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
@@ -94,8 +96,11 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
       <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <Text style={[s.pageTitle, { color: colors.text }]}>Analytics</Text>
-        <Text style={[s.pageSub, { color: colors.text2 }]}>Portfolio & agent performance · Sui testnet</Text>
+        <View>
+          <Text style={[s.pageTitle, { color: colors.text }]}>Analytics</Text>
+          <Text style={[s.pageSub, { color: colors.text2 }]}>Portfolio & agent performance · Sui testnet</Text>
+        </View>
+        {bellEl}
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -132,6 +137,29 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
             <MarketRow label="Unrealised SUI" value={`${unrealisedSui >= 0 ? "+" : ""}${unrealisedSui.toFixed(4)} SUI`} />
           </View>
         )}
+
+        {/* DCA agent performance grid — matches website analytics 3-col / 9-cell grid */}
+        <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <Text style={[s.panelTitle, { color: colors.text }]}>DCA agent performance</Text>
+          <View style={s.perfGrid}>
+            {[
+              { label: "Total invested",  val: `${totalSuiSpent.toFixed(4)} SUI` },
+              { label: "Budget cap",      val: `${budgetCap.toFixed(4)} SUI` },
+              { label: "Utilisation",     val: budgetCap > 0 ? `${((spent / budgetCap) * 100).toFixed(1)}%` : "—" },
+              { label: "DEEP accumulated",val: totalDeepAcc > 0 ? totalDeepAcc.toFixed(4) : "—" },
+              { label: "Current value",   val: totalDeepAcc > 0 ? `${currentDeepValSui.toFixed(4)} SUI` : "—" },
+              { label: "Unrealised P&L",  val: unrealisedSui !== 0 ? `${unrealisedSui >= 0 ? "+" : ""}${unrealisedSui.toFixed(4)}` : "—", accent: unrealisedSui >= 0 },
+              { label: "Trade count",     val: String(count) },
+              { label: "Success rate",    val: count > 0 ? "100%" : "—" },
+              { label: "Avg buy price",   val: avgBuyPrice > 0 ? usd(avgBuyPrice, 6) : "—" },
+            ].map(({ label, val, accent }) => (
+              <View key={label} style={[s.perfCell, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}>
+                <Text style={[s.perfLabel, { color: colors.text3 }]}>{label}</Text>
+                <Text style={[s.perfVal, { color: accent ? colors.accent : colors.text }]}>{val}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         {/* Portfolio allocation */}
         <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
@@ -174,7 +202,7 @@ const mr = StyleSheet.create({
 const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
-  header:    { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
   pageSub:   { fontSize: 13, marginTop: 2 },
   statGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 10 },
@@ -186,4 +214,8 @@ const s = StyleSheet.create({
   allocTrack:{ flex: 1, height: 6, borderRadius: 3, overflow: "hidden" },
   allocFill: { height: "100%", borderRadius: 3 },
   allocPct:  { fontSize: 13, width: 36, textAlign: "right" },
+  perfGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
+  perfCell:  { width: "31%", flexGrow: 1, borderRadius: 10, borderWidth: 1, padding: 10, gap: 4 },
+  perfLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5 },
+  perfVal:   { fontSize: 14, fontWeight: "700" },
 });
