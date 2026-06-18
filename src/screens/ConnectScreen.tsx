@@ -98,21 +98,8 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
       <Animated.View style={[s.card, { opacity: cardOp, transform: [{ translateY: cardY }] }]}>
         <View style={s.cardBg} />
 
-        <Text style={s.cardTitle}>Connect your wallet</Text>
-        <Text style={s.cardSub}>No password. No seed phrases.</Text>
-
-        <View style={s.infoRow}>
-          <View style={s.infoIcon}>
-            <Ionicons name="shield-checkmark-outline" size={15} color="#06b6d4" />
-          </View>
-          <Text style={s.infoText}>
-            Powered by zkLogin — your private keys never leave your wallet
-          </Text>
-        </View>
-
         {error ? (
           <View style={s.errBox}>
-            <Ionicons name="alert-circle-outline" size={14} color="#ef4444" />
             <Text style={s.errText}>{error}</Text>
           </View>
         ) : null}
@@ -220,15 +207,8 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(8,11,16,0.97)",
     borderRadius: 24,
   },
-  cardTitle: { color: "#fafafa", fontSize: 20, fontWeight: "700", marginBottom: 6, textAlign: "center" },
-  cardSub:   { color: "#5c5c5c", fontSize: 14, textAlign: "center", marginBottom: 20 },
-
-  infoRow:  { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 18 },
-  infoIcon: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0, backgroundColor: "rgba(6,182,212,0.12)" },
-  infoText: { flex: 1, color: "#8a8a8a", fontSize: 12, lineHeight: 18 },
-
-  errBox: { flexDirection: "row", gap: 8, backgroundColor: "rgba(239,68,68,0.10)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)", borderRadius: 10, padding: 12, marginBottom: 14, alignItems: "flex-start" },
-  errText:{ flex: 1, color: "#ef4444", fontSize: 12, lineHeight: 17 },
+  errBox: { backgroundColor: "rgba(239,68,68,0.10)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)", borderRadius: 10, padding: 12, marginBottom: 14 },
+  errText:{ color: "#ef4444", fontSize: 12, lineHeight: 17 },
 
   googleBtn:      { borderRadius: 14, overflow: "hidden", marginBottom: 10, borderWidth: 1, borderColor: "rgba(6,182,212,0.38)" },
   googleBtnInner: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 15 },
