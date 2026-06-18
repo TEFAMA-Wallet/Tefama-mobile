@@ -125,6 +125,12 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
             {!busy && <Ionicons name="arrow-forward" size={16} color="#06b6d4" />}
           </LinearGradient>
         </Pressable>
+
+        <Pressable style={s.appleBtn} disabled>
+          <Ionicons name="logo-apple" size={17} color="rgba(250,250,250,0.22)" />
+          <Text style={s.appleBtnText}>Continue with Apple</Text>
+          <View style={s.soonBadge}><Text style={s.soonText}>Soon</Text></View>
+        </Pressable>
       </Animated.View>
 
       {/* ── Version ── */}
@@ -192,9 +198,14 @@ const s = StyleSheet.create({
   errBox:  { backgroundColor: "rgba(239,68,68,0.10)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)", borderRadius: 10, padding: 12, marginBottom: 14 },
   errText: { color: "#ef4444", fontSize: 12, lineHeight: 17 },
 
-  googleBtn:      { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(6,182,212,0.38)" },
+  googleBtn:      { borderRadius: 14, overflow: "hidden", marginBottom: 10, borderWidth: 1, borderColor: "rgba(6,182,212,0.38)" },
   googleBtnInner: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 15 },
   googleBtnText:  { flex: 1, color: "#fafafa", fontSize: 15, fontWeight: "600" },
+
+  appleBtn:     { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", backgroundColor: "rgba(255,255,255,0.02)", opacity: 0.4 },
+  appleBtnText: { flex: 1, color: "rgba(250,250,250,0.3)", fontSize: 15, fontWeight: "600" },
+  soonBadge:    { backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 100 },
+  soonText:     { color: "#3d3d3d", fontSize: 10, fontWeight: "700" },
 
   version: { position: "absolute", bottom: 28, alignSelf: "center", color: "#2a2a2a", fontSize: 12 },
 });
