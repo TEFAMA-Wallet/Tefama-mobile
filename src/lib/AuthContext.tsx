@@ -1,21 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as AuthSession from "expo-auth-session";
-import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { API_BASE, GOOGLE_CLIENT_ID, ZKLOGIN_SALT_SECRET } from "./constants";
+import { API_BASE } from "./constants";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const STORAGE_KEY = "@tefama_session_v2";
+const STORAGE_KEY = "@tefama_session_v3";
+
+// URL the website will deep-link back to after Google auth
+const CONNECT_URL = `${API_BASE}/connect?mobile=1`;
+const REDIRECT_SCHEME = "tefama://";
 
 export interface Session {
   email:   string;
@@ -35,78 +36,18 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const GOOGLE_DISCOVERY = {
-  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-  tokenEndpoint:         "https://oauth2.googleapis.com/token",
-};
-
-// Decode a JWT payload without verifying the signature
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const part = token.split(".")[1] ?? "";
-  const padded = part.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = (4 - (padded.length % 4)) % 4;
-  try {
-    return JSON.parse(atob(padded + "=".repeat(pad))) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-// SHA256(sub + ":" + salt) → "0x" + first 62 hex chars
-async function deriveAddress(sub: string, salt: string): Promise<string> {
-  const hex = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    sub + ":" + salt,
-    { encoding: Crypto.CryptoEncoding.HEX },
-  );
-  return "0x" + hex.slice(0, 62).padEnd(62, "0");
-}
-
-// POST id_token to the website salt API, same secret/logic as the website
-async function fetchSalt(idToken: string): Promise<string> {
-  try {
-    const res = await fetch(`${API_BASE}/api/zklogin/salt`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ token: idToken }),
-    });
-    if (res.ok) {
-      const body = await res.json() as { salt?: string; error?: string };
-      if (body.salt) return body.salt;
-    }
-  } catch {
-    // fall through to local computation
-  }
-  // Local fallback: same HMAC logic as the server (ZKLOGIN_SALT_SECRET is known)
-  // SHA256(sub + ZKLOGIN_SALT_SECRET) — gives same address on both web + mobile
-  return ZKLOGIN_SALT_SECRET;
+// Parse key=value pairs from a tefama://auth?... URL
+function parseDeepLink(url: string): Record<string, string> {
+  const qi = url.indexOf("?");
+  if (qi === -1) return {};
+  return Object.fromEntries(new URLSearchParams(url.slice(qi + 1)));
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession]   = useState<Session | null>(null);
-  const [isLoading, setLoading] = useState(true);
+  const [session,   setSession]  = useState<Session | null>(null);
+  const [isLoading, setLoading]  = useState(true);
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: "tefama" });
-
-  // Generate a fresh nonce per mount — Google requires nonce for id_token
-  const nonce = useRef(
-    Crypto.getRandomValues(new Uint8Array(16))
-      .reduce((s, b) => s + b.toString(16).padStart(2, "0"), "")
-  ).current;
-
-  const [request,, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId:     GOOGLE_CLIENT_ID,
-      redirectUri,
-      responseType: AuthSession.ResponseType.IdToken,
-      scopes:       ["openid", "email", "profile"],
-      usePKCE:      false,
-      extraParams:  { nonce },
-    },
-    GOOGLE_DISCOVERY,
-  );
-
-  // Restore persisted session
+  // Restore persisted session on mount
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
       if (raw) {
@@ -117,9 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async () => {
-    if (!request) throw new Error("Auth request not ready — try again");
-
-    const result = await promptAsync();
+    // Open the website connect page in an in-app browser (SFSafariViewController / Chrome Custom Tab).
+    // The website handles Google OAuth with its already-registered redirect URI.
+    // After auth, it deep-links back to tefama://auth?address=...&email=...&sub=...
+    const result = await WebBrowser.openAuthSessionAsync(CONNECT_URL, REDIRECT_SCHEME);
 
     if (result.type === "cancel" || result.type === "dismiss") {
       throw new Error("Sign-in was cancelled");
@@ -128,28 +70,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Sign-in failed — please try again");
     }
 
-    const idToken = result.params.id_token;
-    if (!idToken) {
-      throw new Error("Google did not return an id_token");
+    const params  = parseDeepLink(result.url);
+    const address = params.address;
+    const email   = params.email;
+    const sub     = params.sub;
+
+    if (!address || !email || !sub) {
+      throw new Error("Incomplete auth data from website — please try again");
     }
 
-    // Decode id_token to get profile (sub, email, name, picture)
-    const payload = decodeJwtPayload(idToken);
-    const sub     = String(payload.sub   ?? "");
-    const email   = String(payload.email ?? "");
-    const name    = String(payload.name  ?? email);
-    const picture = String(payload.picture ?? "");
+    const newSession: Session = {
+      address,
+      email,
+      name:    params.name    ?? email,
+      picture: params.picture ?? "",
+      sub,
+    };
 
-    if (!sub) throw new Error("Could not read user identity from token");
-
-    // Derive salt (same algorithm as website backend)
-    const salt    = await fetchSalt(idToken);
-    const address = await deriveAddress(sub, salt);
-
-    const newSession: Session = { email, name, picture, address, sub };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
     setSession(newSession);
-  }, [request, promptAsync]);
+  }, []);
 
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
