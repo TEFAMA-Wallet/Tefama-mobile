@@ -1,29 +1,28 @@
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "../components/Button";
 import { BrandLogo } from "../components/BrandLogo";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { useAuth } from "../lib/AuthContext";
 
-function GoogleGlyph() {
+const { height: H } = Dimensions.get("window");
+
+function GoogleG() {
   return (
-    <View style={g.wrap}>
-      <Text style={g.blue}>G</Text><Text style={g.red}>o</Text>
-      <Text style={g.yellow}>o</Text><Text style={g.blue2}>g</Text>
-      <Text style={g.green}>l</Text><Text style={g.red}>e</Text>
+    <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ fontSize: 13, fontWeight: "900", color: "#4285F4" }}>G</Text>
     </View>
   );
 }
-const g = StyleSheet.create({
-  wrap:   { flexDirection: "row" },
-  blue:   { color: "#4285F4", fontWeight: "700", fontSize: 14 },
-  red:    { color: "#EA4335", fontWeight: "700", fontSize: 14 },
-  yellow: { color: "#FBBC05", fontWeight: "700", fontSize: 14 },
-  blue2:  { color: "#4285F4", fontWeight: "700", fontSize: 14 },
-  green:  { color: "#34A853", fontWeight: "700", fontSize: 14 },
-});
+
+const FEATURES = [
+  { icon: "hardware-chip-outline" as const, text: "Agents trade on your behalf, 24/7" },
+  { icon: "shield-checkmark-outline" as const, text: "Hard on-chain budget cap — never exceeded" },
+  { icon: "flash-off-outline" as const, text: "One-tap revoke, funds back instantly" },
+];
 
 export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   const { isDark } = useColorTheme();
@@ -39,7 +38,7 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
       await login();
       onConnected();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-in failed");
+      setError(e instanceof Error ? e.message : "Sign-in failed — please try again");
     } finally {
       setBusy(false);
     }
@@ -48,18 +47,37 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
 
-      <View style={s.body}>
-        <BrandLogo size={120} />
-        <Text style={[s.title, { color: colors.text }]}>No wallet needed</Text>
-        <Text style={[s.sub, { color: colors.text2 }]}>
-          Sign in to create and watch your agents.{"\n"}No seed phrases, no extensions.
-        </Text>
+      {/* Top ambient gradient */}
+      <LinearGradient
+        colors={["rgba(255,140,0,0.12)", "transparent"]}
+        style={s.topGlow}
+        pointerEvents="none"
+      />
+
+      {/* Logo section */}
+      <View style={s.logoSection}>
+        <BrandLogo size={80} />
+        <Text style={[s.brand, { color: colors.text }]}>TEFAMA</Text>
+        <Text style={[s.tagline, { color: colors.text2 }]}>Autonomous trading agents</Text>
       </View>
 
-      <View style={s.foot}>
+      {/* Feature pills */}
+      <View style={s.features}>
+        {FEATURES.map(({ icon, text }) => (
+          <View key={text} style={[s.featureRow, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
+            <View style={[s.featureIco, { backgroundColor: colors.accent }]}>
+              <Ionicons name={icon} size={13} color="#fff" />
+            </View>
+            <Text style={[s.featureText, { color: colors.text }]}>{text}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Auth section */}
+      <View style={s.authSection}>
         {error ? (
-          <View style={[s.errBox, { backgroundColor: "rgba(212,75,42,0.12)", borderColor: "rgba(212,75,42,0.3)" }]}>
-            <Ionicons name="alert-circle-outline" size={15} color="#D44B2A" />
+          <View style={[s.errBox, { backgroundColor: "rgba(212,75,42,0.10)", borderColor: "rgba(212,75,42,0.25)" }]}>
+            <Ionicons name="alert-circle-outline" size={14} color="#D44B2A" />
             <Text style={[s.errText, { color: "#D44B2A" }]}>{error}</Text>
           </View>
         ) : null}
@@ -67,23 +85,23 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
         <Button
           variant="primary" size="lg" block
           onPress={handleGoogle}
-          icon={busy ? <ActivityIndicator size={16} color="#fff" /> : <GoogleGlyph />}
+          icon={busy ? <ActivityIndicator size={16} color="#fff" /> : <GoogleG />}
         >
           {busy ? "Connecting…" : "Continue with Google"}
         </Button>
 
-        <Button variant="secondary" size="lg" block
-          icon={<Ionicons name="logo-apple" size={18} color={isDark ? "#fff" : "#000"} />}
+        <Button
+          variant="secondary" size="lg" block
           onPress={() => {}}
+          icon={<Ionicons name="logo-apple" size={18} color={isDark ? "#fff" : "#000"} />}
         >
-          Continue with Apple
-          <Text style={{ fontSize: 11, opacity: 0.5 }}> (coming soon)</Text>
+          Continue with Apple  ·  coming soon
         </Button>
 
-        <View style={[s.note, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
-          <Ionicons name="shield-checkmark-outline" size={15} color={colors.accent} />
-          <Text style={[s.noteText, { color: colors.text2 }]}>
-            TEFAMA uses <Text style={{ color: colors.text, fontWeight: "700" }}>zkLogin</Text>. Your trading is autonomous and your funds stay self-custodial.
+        <View style={s.zkRow}>
+          <Ionicons name="lock-closed-outline" size={12} color={colors.text3} />
+          <Text style={[s.zkText, { color: colors.text3 }]}>
+            Secured by <Text style={{ color: colors.text2 }}>zkLogin</Text> · no seed phrases · self-custodial
           </Text>
         </View>
       </View>
@@ -92,13 +110,23 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
 }
 
 const s = StyleSheet.create({
-  root:     { flex: 1, paddingHorizontal: 24, paddingBottom: 32 },
-  body:     { flex: 1, justifyContent: "center", alignItems: "center", gap: 18 },
-  title:    { fontSize: 26, fontWeight: "800", letterSpacing: -0.4 },
-  sub:      { fontSize: 16, textAlign: "center", lineHeight: 24 },
-  foot:     { gap: 12 },
-  errBox:   { flexDirection: "row", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, alignItems: "flex-start" },
-  errText:  { flex: 1, fontSize: 13, lineHeight: 18 },
-  note:     { flexDirection: "row", gap: 10, padding: 14, borderRadius: 14, borderWidth: 1, alignItems: "flex-start" },
-  noteText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  root:        { flex: 1, paddingHorizontal: 24 },
+
+  topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: H * 0.35 },
+
+  logoSection: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, marginTop: 24 },
+  brand:       { fontSize: 32, fontWeight: "900", letterSpacing: 6 },
+  tagline:     { fontSize: 15, fontWeight: "400" },
+
+  features:    { gap: 8, marginBottom: 28 },
+  featureRow:  { flexDirection: "row", alignItems: "center", gap: 12, padding: 13, borderRadius: 14, borderWidth: 1 },
+  featureIco:  { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  featureText: { fontSize: 14, fontWeight: "500", flex: 1 },
+
+  authSection: { gap: 10, paddingBottom: 36 },
+  errBox:      { flexDirection: "row", gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "flex-start" },
+  errText:     { flex: 1, fontSize: 13, lineHeight: 18 },
+
+  zkRow:   { flexDirection: "row", alignItems: "center", gap: 5, justifyContent: "center", paddingTop: 4 },
+  zkText:  { fontSize: 12, textAlign: "center", lineHeight: 17 },
 });

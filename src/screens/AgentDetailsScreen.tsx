@@ -1,16 +1,14 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { AppBar } from "../components/AppBar";
-import { Card } from "../components/Card";
-import { Badge } from "../components/Badge";
+import { LinearGradient } from "expo-linear-gradient";
 import { CircularProgress } from "../components/CircularProgress";
+import { Badge } from "../components/Badge";
 import { SectionHead } from "../components/SectionHead";
-import { Button, IconButton } from "../components/Button";
-import { fmtNum } from "../lib/data";
+import { Button } from "../components/Button";
 import type { Agent } from "../lib/data";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
-import { EXPLORER_BASE, VAULT_ID } from "../lib/constants";
+import { VAULT_ID } from "../lib/constants";
 
 type Tx = {
   id: string; time: string; type: "Buy" | "Sell"; pair: string;
@@ -28,115 +26,131 @@ interface Props {
   onViewTx:       (tx: Tx) => void;
 }
 
-function shortHash(h: string) {
-  return h.length > 12 ? `${h.slice(0, 6)}…${h.slice(-4)}` : h;
-}
+const STATUS_COLOR: Record<string, string> = {
+  confirmed: "#4CAF50",
+  pending:   "#FFB300",
+  failed:    "#D44B2A",
+};
 
 export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActivity, onViewTx }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const active  = agent.status === "active";
   const revoked = agent.status === "revoked";
-  const pct     = (agent.spent / (agent.budget || 1)) * 100;
-  const txs     = trades.slice(0, 5);
-
-  const INFO_ROWS: [string, string, boolean][] = [
-    ["Vault ID",  shortHash(VAULT_ID), true ],
-    ["Strategy",  agent.strategy,      false],
-    ["Protocol",  "Deepbook v3",       false],
-    ["Network",   "Sui Testnet",       false],
-    ["Created",   agent.created,       false],
-  ];
+  const pct     = Math.min((agent.spent / (agent.budget || 1)) * 100, 100);
+  const txs     = trades.slice(0, 6);
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      <AppBar
-        title={agent.name}
-        subtitle={agent.pair}
-        onBack={onBack}
-        actions={
-          <IconButton size="sm">
-            <Ionicons name="open-outline" size={18} color={colors.text2} />
-          </IconButton>
-        }
-      />
+
+      {/* Back header */}
+      <View style={s.topBar}>
+        <Pressable style={[s.backBtn, { backgroundColor: colors.accentDim }]} onPress={onBack} hitSlop={8}>
+          <Ionicons name="chevron-back" size={20} color={colors.accent} />
+        </Pressable>
+        <Text style={[s.topBarTitle, { color: colors.text }]}>{agent.name}</Text>
+        <View style={s.backBtn} />
+      </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        <Card accent={active} style={{ alignItems: "center", padding: 24 }}>
-          <Badge status={agent.status} />
-          <View style={{ marginVertical: 18 }}>
+        {/* Gradient hero */}
+        <LinearGradient
+          colors={active ? ["#1C0A00", "#FF8C0016"] : ["#160C00", "#160C00"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[s.heroCard, { borderColor: active ? "rgba(255,140,0,0.28)" : colors.border }]}
+        >
+          <View style={s.heroBadgeRow}>
+            <Badge status={agent.status} />
+            <Text style={s.heroPair}>{agent.pair}</Text>
+          </View>
+
+          <View style={s.heroRingRow}>
             <CircularProgress
-              value={agent.spent} max={agent.budget || 1} size={172} stroke={13}
-              valueText={`${agent.spent.toFixed(3)} / ${agent.budget.toFixed(2)}`}
-              caption="SUI budget"
+              value={agent.spent}
+              max={agent.budget || 1}
+              size={168}
+              stroke={13}
+              valueText={`${agent.spent.toFixed(3)}`}
+              caption={`of ${agent.budget.toFixed(2)} SUI`}
               tone={pct > 90 ? "danger" : "brand"}
             />
+            <View style={s.ringStats}>
+              {[
+                { label: "Used",      val: `${pct.toFixed(0)}%`, accent: true },
+                { label: "Remaining", val: `${Math.max(0, agent.budget - agent.spent).toFixed(3)}` },
+                { label: "Trades",    val: String(agent.trades || "—") },
+                { label: "Success",   val: agent.trades > 0 ? "100%" : "—", green: true },
+              ].map(({ label, val, accent, green }) => (
+                <View key={label} style={s.ringStat}>
+                  <Text style={s.ringStatK}>{label}</Text>
+                  <Text style={[s.ringStatV, accent ? { color: "#FF8C00" } : green ? { color: "#4CAF50" } : {}]}>{val}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-          <View style={[s.timeWrap, { backgroundColor: colors.bg4 }]}>
-            <Ionicons name="repeat-outline" size={15} color={colors.text2} />
-            <Text style={[s.timeText, { color: colors.text2 }]}>{agent.trades} executions</Text>
-          </View>
-        </Card>
+        </LinearGradient>
 
-        <View style={s.grid}>
+        {/* Strategy info */}
+        <View style={[s.infoCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
           {[
-            { label: "Total trades", val: String(agent.trades) },
-            { label: "Volume (SUI)", val: agent.volume.toFixed(3) },
-            { label: "Success",      val: `${agent.successRate}%`, green: true },
-          ].map(({ label, val, green }) => (
-            <Card key={label} style={[s.statCard, { padding: 14 }]}>
-              <Text style={[s.statK, { color: colors.text2 }]}>{label}</Text>
-              <Text style={[s.statV, { color: green ? "#4CAF50" : colors.text }]}>{val}</Text>
-            </Card>
+            ["Strategy",    agent.strategy],
+            ["Protocol",    "DeepBook v3"],
+            ["Network",     "Sui Testnet"],
+            ["Volume",      agent.volume > 0 ? `${agent.volume.toFixed(3)} SUI` : "—"],
+            ["Vault ID",    `${VAULT_ID.slice(0, 10)}…${VAULT_ID.slice(-6)}`],
+            ["Created",     agent.created],
+          ].map(([k, v], i, arr) => (
+            <View key={k} style={[s.infoRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+              <Text style={[s.infoK, { color: colors.text2 }]}>{k}</Text>
+              <Text style={[s.infoV, { color: colors.text }]}>{v}</Text>
+            </View>
           ))}
         </View>
 
-        <SectionHead>Agent info</SectionHead>
-        <Card style={{ padding: 0, paddingHorizontal: 16 }}>
-          {INFO_ROWS.map(([k, v, copy], i) => (
-            <View key={k} style={[s.kv, i < INFO_ROWS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-              <Text style={[s.kvK, { color: colors.text2 }]}>{k}</Text>
-              <View style={s.kvRight}>
-                <Text style={[s.kvV, { color: colors.text }]}>{v}</Text>
-                {copy && <Ionicons name="copy-outline" size={13} color={colors.text3} />}
-              </View>
-            </View>
-          ))}
-        </Card>
-
+        {/* Executions */}
         {txs.length > 0 && (
-          <>
-            <SectionHead action="View all" onAction={onViewActivity}>Recent executions</SectionHead>
-            <Card style={{ padding: 4 }}>
+          <View style={s.section}>
+            <View style={s.sectionHead}>
+              <Text style={[s.sectionTitle, { color: colors.text }]}>Executions</Text>
+              <Pressable onPress={onViewActivity} style={s.seeAll}>
+                <Text style={[s.seeAllText, { color: colors.accent }]}>All trades</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.accent} />
+              </Pressable>
+            </View>
+
+            <View style={[s.txList, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
               {txs.map((tx, i) => (
                 <Pressable key={tx.id} onPress={() => onViewTx(tx)}
                   style={[s.txRow, i < txs.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                  <View style={[s.txIco, { backgroundColor: "rgba(76,175,80,0.12)" }]}>
-                    <Ionicons name="arrow-down-outline" size={14} color="#4CAF50" />
+                  <View style={[s.txIco, { backgroundColor: "rgba(76,175,80,0.10)" }]}>
+                    <Ionicons name="arrow-down" size={13} color="#4CAF50" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.txPair, { color: colors.text }]}>{tx.amount}</Text>
+                    <Text style={[s.txAmt, { color: colors.text }]}>{tx.amount}</Text>
                     <Text style={[s.txTime, { color: colors.text3 }]}>{tx.time}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
                     <Text style={[s.txVal, { color: colors.text2 }]}>{tx.value}</Text>
-                    <Badge status={tx.status} />
+                    <View style={s.txStatus}>
+                      <View style={[s.txDot, { backgroundColor: STATUS_COLOR[tx.status] ?? colors.text3 }]} />
+                      <Text style={[s.txStatusText, { color: STATUS_COLOR[tx.status] ?? colors.text2 }]}>{tx.status}</Text>
+                    </View>
                   </View>
                 </Pressable>
               ))}
-            </Card>
-          </>
+            </View>
+          </View>
         )}
 
-        <View style={{ height: 16 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
 
       {!revoked && (
         <View style={[s.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
           <Button variant="secondary" block size="sm"
             icon={<Ionicons name={active ? "pause-outline" : "play-outline"} size={17} color={colors.text} />}>
-            {active ? "Pause" : "Resume"}
+            {active ? "Pause agent" : "Resume agent"}
           </Button>
           <Button variant="danger" block size="sm" onPress={onRevoke}
             icon={<Ionicons name="close-circle-outline" size={17} color="#D44B2A" />}>
@@ -149,22 +163,43 @@ export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActi
 }
 
 const s = StyleSheet.create({
-  root:     { flex: 1 },
-  scroll:   { padding: 14, gap: 12 },
-  timeWrap: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 100 },
-  timeText: { fontSize: 13 },
-  grid:     { flexDirection: "row", gap: 10 },
-  statCard: { flex: 1 },
-  statK:    { fontSize: 11, marginBottom: 6 },
-  statV:    { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
-  kv:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14 },
-  kvK:      { fontSize: 14 },
-  kvRight:  { flexDirection: "row", alignItems: "center", gap: 6 },
-  kvV:      { fontSize: 14, fontWeight: "600" },
-  txRow:    { flexDirection: "row", alignItems: "center", gap: 12, padding: 12 },
-  txIco:    { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  txPair:   { fontSize: 14, fontWeight: "600" },
-  txTime:   { fontSize: 12, marginTop: 2 },
-  txVal:    { fontSize: 13 },
-  footer:   { flexDirection: "row", gap: 12, padding: 14, borderTopWidth: StyleSheet.hairlineWidth },
+  root:   { flex: 1 },
+  scroll: { padding: 16, gap: 14 },
+
+  topBar:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
+  backBtn:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  topBarTitle: { fontSize: 17, fontWeight: "700" },
+
+  heroCard:    { borderRadius: 20, borderWidth: 1, padding: 18, gap: 14 },
+  heroBadgeRow:{ flexDirection: "row", alignItems: "center", gap: 10 },
+  heroPair:    { color: "rgba(245,240,232,0.45)", fontSize: 12 },
+
+  heroRingRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  ringStats:   { flex: 1, gap: 0 },
+  ringStat:    { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.06)" },
+  ringStatK:   { color: "rgba(245,240,232,0.40)", fontSize: 11, fontWeight: "600", marginBottom: 3 },
+  ringStatV:   { color: "rgba(245,240,232,0.85)", fontSize: 17, fontWeight: "800" },
+
+  infoCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  infoRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13 },
+  infoK:    { fontSize: 14 },
+  infoV:    { fontSize: 14, fontWeight: "600" },
+
+  section:     { gap: 10 },
+  sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  sectionTitle:{ fontSize: 16, fontWeight: "700" },
+  seeAll:      { flexDirection: "row", alignItems: "center", gap: 2 },
+  seeAllText:  { fontSize: 13, fontWeight: "600" },
+
+  txList:  { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  txRow:   { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  txIco:   { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  txAmt:   { fontSize: 14, fontWeight: "600" },
+  txTime:  { fontSize: 11, marginTop: 2 },
+  txVal:   { fontSize: 13, fontWeight: "600" },
+  txStatus:{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
+  txDot:   { width: 5, height: 5, borderRadius: 3 },
+  txStatusText: { fontSize: 10, fontWeight: "600" },
+
+  footer:  { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
 });
