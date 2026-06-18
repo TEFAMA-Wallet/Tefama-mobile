@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated, Dimensions, Image, Linking, Pressable, StyleSheet, Text, View,
+  Animated, Dimensions, Image, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -133,18 +133,6 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
           <View style={s.soonBadge}><Text style={s.soonText}>Soon</Text></View>
         </Pressable>
 
-        <View style={s.divider}>
-          <View style={s.dividerLine} />
-          <Text style={s.dividerText}>secure · private · on-chain</Text>
-          <View style={s.dividerLine} />
-        </View>
-
-        <Text style={s.legal}>
-          By continuing you agree to our{" "}
-          <Text style={s.legalLink} onPress={() => Linking.openURL("https://tefama-website.vercel.app/terms")}>Terms</Text>
-          {" "}and{" "}
-          <Text style={s.legalLink} onPress={() => Linking.openURL("https://tefama-website.vercel.app/privacy")}>Privacy Policy</Text>
-        </Text>
       </Animated.View>
     </View>
   );
@@ -220,10 +208,4 @@ const s = StyleSheet.create({
   soonBadge:    { backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 100 },
   soonText:     { color: "#3d3d3d", fontSize: 10, fontWeight: "700" },
 
-  divider:     { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.07)" },
-  dividerText: { color: "#3d3d3d", fontSize: 10, fontWeight: "500", letterSpacing: 0.5 },
-
-  legal:     { color: "#3d3d3d", fontSize: 11, textAlign: "center", lineHeight: 17 },
-  legalLink: { color: "#06b6d4" },
 });
