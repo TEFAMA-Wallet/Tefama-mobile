@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated, Dimensions, Image, Pressable, StyleSheet, Text, View,
+  Animated, Dimensions, Image, KeyboardAvoidingView,
+  Platform, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "../lib/AuthContext";
 
 const { width: W, height: H } = Dimensions.get("window");
 const LOGO_SIZE = Math.round(W * 0.38);
+const VERSION = "1.0.0";
 
 function GoogleIcon() {
   return (
@@ -32,7 +35,6 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   const glowAnim= useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Glow breathe loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, { toValue: 1, duration: 2200, useNativeDriver: true }),
@@ -40,7 +42,6 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
       ])
     ).start();
 
-    // Entrance
     Animated.sequence([
       Animated.parallel([
         Animated.timing(heroOp, { toValue: 1, duration: 480, useNativeDriver: true }),
@@ -54,12 +55,14 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   }, []);
 
   async function handleGoogle() {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setBusy(true);
     setError("");
     try {
       await login();
       onConnected();
     } catch (e) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(e instanceof Error ? e.message : "Sign-in failed — please try again");
       setBusy(false);
     }
@@ -69,20 +72,18 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   const glowScale   = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] });
 
   return (
-    <View style={s.root}>
+    <KeyboardAvoidingView
+      style={s.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <LinearGradient colors={["#050509", "#060c10"]} style={StyleSheet.absoluteFill} />
 
       {/* ── Hero ── */}
       <Animated.View style={[s.hero, { opacity: heroOp, transform: [{ translateY: heroY }] }]}>
-        {/* Logo inside a filled glowing circle */}
         <View style={s.logoWrap}>
-          {/* Outer soft glow layer — breathes */}
           <Animated.View style={[s.glowOuter, { opacity: glowOpacity, transform: [{ scale: glowScale }] }]} />
-          {/* Mid filled circle */}
           <View style={s.glowMid} />
-          {/* Inner circle — the "filled" look */}
           <View style={s.glowInner} />
-          {/* Logo sits on top */}
           <Image
             source={require("../../assets/branding/logo-mark.png")}
             style={s.logoImg}
@@ -104,7 +105,6 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
           </View>
         ) : null}
 
-        {/* Google CTA */}
         <Pressable
           onPress={handleGoogle}
           disabled={busy}
@@ -125,30 +125,23 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
             {!busy && <Ionicons name="arrow-forward" size={16} color="#06b6d4" />}
           </LinearGradient>
         </Pressable>
-
-        {/* Apple — coming soon */}
-        <Pressable style={s.appleBtn} disabled>
-          <Ionicons name="logo-apple" size={17} color="rgba(250,250,250,0.22)" />
-          <Text style={s.appleBtnText}>Continue with Apple</Text>
-          <View style={s.soonBadge}><Text style={s.soonText}>Soon</Text></View>
-        </Pressable>
-
       </Animated.View>
-    </View>
+
+      {/* ── Version ── */}
+      <Text style={s.version}>v{VERSION}</Text>
+    </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#050509" },
 
-  // Hero
   hero: {
     alignItems: "center",
     paddingTop: H * 0.09,
     paddingBottom: 28,
   },
 
-  // Logo layers — outer→inner creates depth
   logoWrap: {
     width:  LOGO_SIZE + 56,
     height: LOGO_SIZE + 56,
@@ -182,7 +175,6 @@ const s = StyleSheet.create({
   wordmark: { color: "#fafafa", fontSize: 28, fontWeight: "800", letterSpacing: 9, marginBottom: 8 },
   tagline:  { color: "#4a4a4a", fontSize: 14, letterSpacing: 0.3 },
 
-  // Card
   card: {
     marginHorizontal: 16,
     borderRadius: 24,
@@ -196,16 +188,13 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(8,11,16,0.97)",
     borderRadius: 24,
   },
-  errBox: { backgroundColor: "rgba(239,68,68,0.10)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)", borderRadius: 10, padding: 12, marginBottom: 14 },
-  errText:{ color: "#ef4444", fontSize: 12, lineHeight: 17 },
 
-  googleBtn:      { borderRadius: 14, overflow: "hidden", marginBottom: 10, borderWidth: 1, borderColor: "rgba(6,182,212,0.38)" },
+  errBox:  { backgroundColor: "rgba(239,68,68,0.10)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)", borderRadius: 10, padding: 12, marginBottom: 14 },
+  errText: { color: "#ef4444", fontSize: 12, lineHeight: 17 },
+
+  googleBtn:      { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(6,182,212,0.38)" },
   googleBtnInner: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 15 },
   googleBtnText:  { flex: 1, color: "#fafafa", fontSize: 15, fontWeight: "600" },
 
-  appleBtn:     { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", backgroundColor: "rgba(255,255,255,0.02)", marginBottom: 20, opacity: 0.4 },
-  appleBtnText: { flex: 1, color: "rgba(250,250,250,0.3)", fontSize: 15, fontWeight: "600" },
-  soonBadge:    { backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 100 },
-  soonText:     { color: "#3d3d3d", fontSize: 10, fontWeight: "700" },
-
+  version: { position: "absolute", bottom: 28, alignSelf: "center", color: "#2a2a2a", fontSize: 12 },
 });
