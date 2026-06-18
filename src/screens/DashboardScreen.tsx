@@ -1,28 +1,49 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Defs, LinearGradient as SvgGrad, Path, Stop } from "react-native-svg";
 import { AppBar } from "../components/AppBar";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { CircularProgress } from "../components/CircularProgress";
-import { ProgressBar } from "../components/ProgressBar";
 import { Button, IconButton } from "../components/Button";
 import { SectionHead } from "../components/SectionHead";
-import { TxRow } from "../components/TxRow";
 import { BrandLogo } from "../components/BrandLogo";
-import { WALLET, STATS, AGENTS, ACTIVITY, fmtUSD, fmtNum } from "../lib/data";
-import type { Agent, Tx } from "../lib/data";
+import { fmtUSD, fmtNum } from "../lib/data";
+import type { Agent } from "../lib/data";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
+import type { usePrice, useWallet, useTrades } from "../lib/useOnchain";
+type PriceData  = ReturnType<typeof usePrice>;
+type WalletData = ReturnType<typeof useWallet>;
+type TradeData  = ReturnType<typeof useTrades>;
 
-function Sparkline() {
+// Tx shape used for the modal (kept compatible with TxDetailModal)
+type Tx = {
+  id: string; time: string; type: "Buy" | "Sell"; pair: string;
+  amount: string; value: string; price: string;
+  status: "confirmed" | "pending" | "failed";
+  gas: string; hash: string; agent: string;
+};
+
+interface Props {
+  priceData:  PriceData;
+  walletData: WalletData;
+  tradeData:  TradeData;
+  liveAgent:  Agent;
+  onViewAgent:    () => void;
+  onViewAgents:   () => void;
+  onViewActivity: () => void;
+  onViewTx: (tx: Tx) => void;
+}
+
+function Sparkline({ prices }: { prices: number[] }) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
-  const spark = WALLET.spark;
+  if (prices.length < 2) return null;
   const W = 300, H = 44;
-  const max = Math.max(...spark), min = Math.min(...spark);
-  const pts = spark.map((v, i) => [
-    (i / (spark.length - 1)) * W,
+  const max = Math.max(...prices), min = Math.min(...prices);
+  const pts = prices.map((v, i) => [
+    (i / (prices.length - 1)) * W,
     H - 3 - ((v - min) / ((max - min) || 1)) * (H - 8),
   ]);
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
@@ -41,18 +62,33 @@ function Sparkline() {
   );
 }
 
-interface Props {
-  onViewAgent: (agent: Agent) => void;
-  onViewAgents: () => void;
-  onViewActivity: () => void;
-  onViewTx: (tx: Tx) => void;
-}
-
-export function DashboardScreen({ onViewAgent, onViewAgents, onViewActivity, onViewTx }: Props) {
+export function DashboardScreen({
+  priceData, walletData, tradeData, liveAgent,
+  onViewAgent, onViewAgents, onViewActivity, onViewTx,
+}: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
-  const hero = AGENTS[0];
-  const pct  = (hero.spent / hero.budget) * 100;
+
+  const vault      = walletData.vault;
+  const pct        = vault ? (vault.spent / (vault.budgetCap || 1)) * 100 : 0;
+  const deepValue  = walletData.deepBalance * priceData.deepPrice;
+  const totalUsd   = walletData.suiBalance * priceData.price + walletData.usdcBalance + deepValue;
+  const gainPct    = tradeData.roi;
+  const sparkPrices = tradeData.trades.slice(-12).reverse().map(t => t.price);
+
+  const recentTxs = tradeData.trades.slice(0, 4).map(t => ({
+    id:     t.id,
+    time:   t.time,
+    type:   "Buy" as const,
+    pair:   "DEEP / SUI",
+    amount: `+${t.baseReceived.toFixed(3)} DEEP`,
+    value:  `${t.quoteSpent.toFixed(4)} SUI`,
+    price:  t.price.toFixed(6),
+    status: t.status as "confirmed" | "pending" | "failed",
+    gas:    "—",
+    hash:   t.digest,
+    agent:  "DCA Agent",
+  }));
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
@@ -73,36 +109,53 @@ export function DashboardScreen({ onViewAgent, onViewAgents, onViewActivity, onV
         <Card style={{ position: "relative", overflow: "hidden", padding: 18 }}>
           <View style={[s.heroGlow, { backgroundColor: colors.accentDim }]} />
           <Text style={[s.heroLabel, { color: colors.text2 }]}>Total portfolio</Text>
-          <Text style={[s.heroBal,   { color: colors.text }]}>${fmtUSD(WALLET.totalUsd)}</Text>
+          {walletData.loading && !vault ? (
+            <ActivityIndicator color={colors.accent} style={{ marginVertical: 8 }} />
+          ) : (
+            <Text style={[s.heroBal, { color: colors.text }]}>
+              ${fmtUSD(totalUsd || 0)}
+            </Text>
+          )}
           <View style={s.toks}>
             <View style={s.tok}>
               <View style={[s.tokDot, { backgroundColor: colors.accent }]} />
-              <Text style={[s.tokText, { color: colors.text2 }]}>{fmtNum(WALLET.sui)} SUI</Text>
+              <Text style={[s.tokText, { color: colors.text2 }]}>{walletData.suiBalance.toFixed(3)} SUI</Text>
             </View>
             <View style={s.tok}>
               <View style={[s.tokDot, { backgroundColor: "#4A8FD4" }]} />
-              <Text style={[s.tokText, { color: colors.text2 }]}>{fmtUSD(WALLET.usdc)} USDC</Text>
+              <Text style={[s.tokText, { color: colors.text2 }]}>{walletData.deepBalance.toFixed(2)} DEEP</Text>
             </View>
-            <View style={[s.chip, { backgroundColor: "rgba(76,175,80,0.15)" }]}>
-              <Ionicons name="trending-up-outline" size={13} color="#4CAF50" />
-              <Text style={[s.chipText, { color: "#4CAF50" }]}>+{WALLET.gainPct}%</Text>
-            </View>
+            {gainPct !== 0 && (
+              <View style={[s.chip, { backgroundColor: gainPct >= 0 ? "rgba(76,175,80,0.15)" : "rgba(212,75,42,0.15)" }]}>
+                <Ionicons name={gainPct >= 0 ? "trending-up-outline" : "trending-down-outline"} size={13} color={gainPct >= 0 ? "#4CAF50" : "#D44B2A"} />
+                <Text style={[s.chipText, { color: gainPct >= 0 ? "#4CAF50" : "#D44B2A" }]}>{gainPct >= 0 ? "+" : ""}{gainPct.toFixed(2)}%</Text>
+              </View>
+            )}
           </View>
         </Card>
 
-        {/* ── Portfolio performance ── */}
-        <Card style={{ padding: "16px 18px" as any }}>
+        {/* ── Price strip ── */}
+        <Card style={{ padding: 14 }}>
           <View style={s.pfTop}>
-            <Text style={[s.pfLabel, { color: colors.text2 }]}>Portfolio performance</Text>
-            <Text style={[s.pfPeriod, { color: colors.text3 }]}>24h</Text>
+            <Text style={[s.pfLabel, { color: colors.text2 }]}>SUI price</Text>
+            <Text style={[s.pfPeriod, { color: colors.text3 }]}>DeepBook testnet</Text>
           </View>
           <View style={s.pfRow}>
             <View>
-              <Text style={[s.pfGain, { color: "#4CAF50" }]}>+${fmtUSD(WALLET.gain)}</Text>
-              <Text style={[s.pfSub,  { color: colors.text2 }]}>Invested ${fmtUSD(WALLET.invested)} · now ${fmtUSD(WALLET.value)}</Text>
+              <Text style={[s.pfGain, { color: colors.text }]}>${priceData.price.toFixed(4)}</Text>
+              <Text style={[s.pfSub, { color: colors.text2 }]}>
+                DEEP ${priceData.deepPrice.toFixed(6)} · Vol {fmtNum(Math.round(priceData.volume24h))} SUI
+              </Text>
             </View>
+            {priceData.change24h !== 0 && (
+              <View style={[s.chip, { backgroundColor: priceData.change24h >= 0 ? "rgba(76,175,80,0.15)" : "rgba(212,75,42,0.15)" }]}>
+                <Text style={{ color: priceData.change24h >= 0 ? "#4CAF50" : "#D44B2A", fontSize: 12, fontWeight: "700" }}>
+                  {priceData.change24h >= 0 ? "+" : ""}{priceData.change24h.toFixed(2)}%
+                </Text>
+              </View>
+            )}
           </View>
-          <Sparkline />
+          <Sparkline prices={sparkPrices} />
         </Card>
 
         {/* ── Active agent hero ── */}
@@ -114,24 +167,26 @@ export function DashboardScreen({ onViewAgent, onViewAgents, onViewActivity, onV
                 <Ionicons name="hardware-chip-outline" size={22} color={colors.accent} />
               </View>
               <View>
-                <Text style={[s.agentName, { color: colors.text }]}>{hero.name}</Text>
-                <Text style={[s.agentMeta, { color: colors.text2 }]}>{hero.strategy} · {hero.pair}</Text>
+                <Text style={[s.agentName, { color: colors.text }]}>{liveAgent.name}</Text>
+                <Text style={[s.agentMeta, { color: colors.text2 }]}>{liveAgent.strategy} · {liveAgent.pair}</Text>
               </View>
             </View>
-            <Badge status={hero.status} />
+            <Badge status={liveAgent.status} />
           </View>
 
           <View style={s.ringRow}>
             <CircularProgress
-              value={hero.spent} max={hero.budget} size={132} stroke={11}
-              valueText={`${hero.spent} / ${hero.budget}`} caption="USDC used"
+              value={vault?.spent ?? 0} max={vault?.budgetCap ?? 1}
+              size={132} stroke={11}
+              valueText={vault ? `${vault.spent.toFixed(3)} / ${vault.budgetCap.toFixed(2)}` : "—"}
+              caption="SUI used"
               tone={pct > 90 ? "danger" : "brand"}
             />
             <View style={s.miniStats}>
               {[
-                { icon: "time-outline",        label: "Time left",  val: hero.timeLeft      },
-                { icon: "repeat-outline",      label: "Trades",     val: String(hero.trades) },
-                { icon: "speedometer-outline", label: "Success",    val: `${hero.successRate}%`, green: true },
+                { icon: "repeat-outline",      label: "Trades",   val: String(tradeData.count) },
+                { icon: "layers-outline",       label: "DEEP acc", val: walletData.deepBalance.toFixed(2) },
+                { icon: "cash-outline",         label: "P&L",      val: `${tradeData.pnl >= 0 ? "+" : ""}${tradeData.pnl.toFixed(4)} SUI`, green: tradeData.pnl >= 0 },
               ].map(({ icon, label, val, green }) => (
                 <View key={label} style={s.miniStat}>
                   <View style={s.miniStatLeft}>
@@ -145,20 +200,16 @@ export function DashboardScreen({ onViewAgent, onViewAgents, onViewActivity, onV
           </View>
 
           <View style={s.agentBtns}>
-            <Button variant="secondary" size="sm" block onPress={() => onViewAgent(hero)}>View details</Button>
-            <Button variant="danger"    size="sm" block onPress={() => onViewAgent(hero)}
-              icon={<Ionicons name="close-circle-outline" size={15} color="#D44B2A" />}>
-              Revoke
-            </Button>
+            <Button variant="secondary" size="sm" block onPress={onViewAgent}>View details</Button>
           </View>
         </Card>
 
         {/* ── Quick stats ── */}
         <View style={s.statGrid}>
           {[
-            { label: "Trades today", val: String(STATS.tradesToday) },
-            { label: "Volume",       val: `$${fmtNum(STATS.volume)}` },
-            { label: "Success rate", val: `${STATS.successRate}%`, green: true },
+            { label: "SUI price",   val: `$${priceData.price.toFixed(4)}` },
+            { label: "Total trades", val: String(tradeData.count) },
+            { label: "ROI",         val: `${tradeData.roi >= 0 ? "+" : ""}${tradeData.roi.toFixed(1)}%`, green: tradeData.roi >= 0 },
           ].map(({ label, val, green }) => (
             <Card key={label} style={[s.statCard, { padding: 14 }]}>
               <Text style={[s.statK, { color: colors.text2 }]}>{label}</Text>
@@ -170,9 +221,27 @@ export function DashboardScreen({ onViewAgent, onViewAgents, onViewActivity, onV
         {/* ── Recent trades ── */}
         <SectionHead action="View all" onAction={onViewActivity}>Recent trades</SectionHead>
         <Card style={{ padding: 4 }}>
-          {ACTIVITY.slice(0, 4).map((tx) => (
-            <TxRow key={tx.id} tx={tx} onPress={() => onViewTx(tx)} />
-          ))}
+          {tradeData.loading && recentTxs.length === 0 ? (
+            <ActivityIndicator color={colors.accent} style={{ padding: 20 }} />
+          ) : recentTxs.length === 0 ? (
+            <Text style={[s.empty, { color: colors.text2 }]}>No trades yet</Text>
+          ) : (
+            recentTxs.map((tx) => (
+              <View key={tx.id} style={[s.txRow, { borderBottomColor: colors.border }]}>
+                <View style={[s.txIco, { backgroundColor: "rgba(76,175,80,0.12)" }]}>
+                  <Ionicons name="arrow-down-outline" size={14} color="#4CAF50" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.txPair, { color: colors.text }]}>{tx.pair}</Text>
+                  <Text style={[s.txTime, { color: colors.text3 }]}>{tx.time}</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={[s.txAmt, { color: "#4CAF50" }]}>{tx.amount}</Text>
+                  <Text style={[s.txVal, { color: colors.text2 }]}>{tx.value}</Text>
+                </View>
+              </View>
+            ))
+          )}
         </Card>
 
         <View style={{ height: 16 }} />
@@ -198,7 +267,7 @@ const s = StyleSheet.create({
   pfTop:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   pfLabel:  { fontSize: 12 },
   pfPeriod: { fontSize: 12 },
-  pfRow:    { marginTop: 8 },
+  pfRow:    { marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   pfGain:   { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
   pfSub:    { fontSize: 11, marginTop: 2 },
 
@@ -219,4 +288,12 @@ const s = StyleSheet.create({
   statCard: { flex: 1 },
   statK:    { fontSize: 11, marginBottom: 6 },
   statV:    { fontSize: 20, fontWeight: "800", letterSpacing: -0.5 },
+
+  empty:    { textAlign: "center", padding: 20, fontSize: 14 },
+  txRow:    { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  txIco:    { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  txPair:   { fontSize: 14, fontWeight: "600" },
+  txTime:   { fontSize: 12, marginTop: 2 },
+  txAmt:    { fontSize: 14, fontWeight: "700" },
+  txVal:    { fontSize: 12, marginTop: 2 },
 });

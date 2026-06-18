@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { AppContainer } from "./src/AppContainer";
 import { ThemeProvider, useColorTheme } from "./src/lib/ThemeContext";
+import { AuthProvider } from "./src/lib/AuthContext";
 
 function Inner() {
   const { isDark } = useColorTheme();
@@ -18,7 +19,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <Inner />
+        <AuthProvider>
+          <Inner />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

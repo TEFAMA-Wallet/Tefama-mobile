@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { BottomNav }         from "./components/BottomNav";
-import { TxDetailModal }     from "./screens/TxDetailModal";
+import { TxDetailModal, type TxShape } from "./screens/TxDetailModal";
 import { SplashScreen }      from "./screens/SplashScreen";
 import { OnboardingScreen }  from "./screens/OnboardingScreen";
 import { ConnectScreen }     from "./screens/ConnectScreen";
@@ -13,9 +13,11 @@ import { AgentDetailsScreen }from "./screens/AgentDetailsScreen";
 import { CreateAgentScreen } from "./screens/CreateAgentScreen";
 import { TemplatesScreen }   from "./screens/TemplatesScreen";
 import { AgentCreatedScreen }from "./screens/AgentCreatedScreen";
-import type { Agent, Tx }    from "./lib/data";
+import { useAuth }           from "./lib/AuthContext";
+import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
+import { VAULT_ID }          from "./lib/constants";
+import type { Agent }        from "./lib/data";
 import type { NavTab }       from "./components/BottomNav";
-import { AGENTS }            from "./lib/data";
 
 type Screen =
   | "splash" | "onboarding" | "connect"
@@ -24,16 +26,40 @@ type Screen =
 
 const TAB_SCREENS: NavTab[] = ["home", "agents", "activity", "settings"];
 
+// Adapts a live Trade into the legacy Tx shape the detail modal expects
+function tradeToTx(t: Trade) {
+  return {
+    id:     t.id,
+    time:   t.time,
+    type:   "Buy" as const,
+    pair:   "DEEP / SUI",
+    amount: `+${t.baseReceived.toFixed(3)} DEEP`,
+    value:  `${t.quoteSpent.toFixed(4)} SUI`,
+    price:  t.price.toFixed(6),
+    status: t.status as "confirmed" | "pending" | "failed",
+    gas:    "—",
+    hash:   t.digest,
+    agent:  "DCA Agent",
+  };
+}
+
 export function AppContainer() {
-  const [screen,  setScreen]  = useState<Screen>("splash");
-  const [tab,     setTab]     = useState<NavTab>("home");
-  const [agent,   setAgent]   = useState<Agent>(AGENTS[0]);
-  const [tx,      setTx]      = useState<Tx | null>(null);
+  const { session, isLoading: authLoading } = useAuth();
+
+  const [screen,    setScreen]    = useState<Screen>("splash");
+  const [tab,       setTab]       = useState<NavTab>("home");
+  const [selAgent,  setSelAgent]  = useState<Agent | null>(null);
+  const [selTx,     setSelTx]     = useState<TxShape | null>(null);
+  const [splashDone, setSplashDone] = useState(false);
+
+  // Global data hooks — available to all screens
+  const priceData  = usePrice();
+  const walletData = useWallet(session?.address ?? null);
+  const tradeData  = useTrades(VAULT_ID, priceData.deepPrice);
 
   const isTabScreen = (TAB_SCREENS as string[]).includes(screen);
 
-  function go(s: Screen, payload?: Agent) {
-    if (payload) setAgent(payload);
+  function go(s: Screen) {
     setScreen(s);
     if ((TAB_SCREENS as string[]).includes(s)) setTab(s as NavTab);
   }
@@ -44,71 +70,117 @@ export function AppContainer() {
     setScreen(key);
   }
 
+  function handleSplashDone() {
+    setSplashDone(true);
+    if (authLoading) { setScreen("splash"); return; } // wait a tick
+    if (session) { setScreen("home"); } else { setScreen("onboarding"); }
+  }
+
+  // Once auth resolves after splash, navigate
+  if (splashDone && screen === "splash" && !authLoading) {
+    setScreen(session ? "home" : "onboarding");
+  }
+
+  // Build a synthetic "Agent" from live vault data for screens that need it
+  const vault = walletData.vault;
+  const liveAgent: Agent = {
+    id:          "vault_0",
+    name:        "DCA Agent",
+    strategy:    "DCA",
+    status:      vault?.paused ? "paused" : "active",
+    pair:        "DEEP / SUI",
+    budget:      vault?.budgetCap ?? 0,
+    spent:       vault?.spent     ?? 0,
+    timeLeft:    "—",
+    lastTrade:   tradeData.trades[0]?.time ?? "—",
+    trades:      tradeData.count,
+    volume:      tradeData.trades.reduce((s, t) => s + t.quoteSpent, 0),
+    successRate: tradeData.count > 0 ? 100 : 0,
+    avgSlippage: 0,
+    created:     "Jun 2026",
+  };
+
+  const liveTxs = tradeData.trades.map(tradeToTx);
+
   let content: React.ReactNode;
 
   switch (screen) {
     case "splash":
-      content = <SplashScreen onDone={() => setScreen("onboarding")} />;
+      content = <SplashScreen onDone={handleSplashDone} />;
       break;
     case "onboarding":
-      content = <OnboardingScreen onDone={() => setScreen("connect")} />;
+      content = <OnboardingScreen onDone={() => go("connect")} />;
       break;
     case "connect":
       content = <ConnectScreen onConnected={() => go("home")} />;
       break;
     case "home":
       content = <DashboardScreen
-        onViewAgent={(a) => { setAgent(a); setScreen("agent-detail"); }}
+        priceData={priceData}
+        walletData={walletData}
+        tradeData={tradeData}
+        liveAgent={liveAgent}
+        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
         onViewAgents={() => go("agents")}
         onViewActivity={() => go("activity")}
-        onViewTx={(t) => setTx(t)}
+        onViewTx={(tx) => setSelTx(tx)}
       />;
       break;
     case "agents":
       content = <AgentsScreen
-        onViewAgent={(a) => { setAgent(a); setScreen("agent-detail"); }}
-        onCreateAgent={() => setScreen("templates")}
+        liveAgent={liveAgent}
+        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
+        onCreateAgent={() => go("templates")}
       />;
       break;
     case "activity":
-      content = <ActivityScreen onViewTx={(t) => setTx(t)} />;
+      content = <ActivityScreen
+        trades={liveTxs}
+        loading={tradeData.loading}
+        onViewTx={(tx) => setSelTx(tx)}
+      />;
       break;
     case "settings":
       content = <SettingsScreen />;
       break;
     case "agent-detail":
       content = <AgentDetailsScreen
-        agent={agent}
-        onBack={() => setScreen("agents")}
-        onRevoke={() => setScreen("home")}
+        agent={selAgent ?? liveAgent}
+        trades={liveTxs}
+        onBack={() => go("agents")}
+        onRevoke={() => go("home")}
         onViewActivity={() => go("activity")}
-        onViewTx={(t) => setTx(t)}
+        onViewTx={(tx) => setSelTx(tx)}
       />;
       break;
     case "templates":
       content = <TemplatesScreen
-        onBack={() => setScreen(tab)}
-        onSelect={() => setScreen("create")}
+        onBack={() => go(tab)}
+        onSelect={() => go("create")}
       />;
       break;
     case "create":
       content = <CreateAgentScreen
-        onBack={() => setScreen("templates")}
-        onDone={() => setScreen("created")}
+        onBack={() => go("templates")}
+        onDone={() => go("created")}
       />;
       break;
     case "created":
       content = <AgentCreatedScreen
-        onViewAgent={(a) => { setAgent(a); setScreen("agent-detail"); }}
+        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
         onHome={() => go("home")}
       />;
       break;
     default:
       content = <DashboardScreen
-        onViewAgent={(a) => { setAgent(a); setScreen("agent-detail"); }}
+        priceData={priceData}
+        walletData={walletData}
+        tradeData={tradeData}
+        liveAgent={liveAgent}
+        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
         onViewAgents={() => go("agents")}
         onViewActivity={() => go("activity")}
-        onViewTx={(t) => setTx(t)}
+        onViewTx={(tx) => setSelTx(tx)}
       />;
   }
 
@@ -120,7 +192,7 @@ export function AppContainer() {
         <BottomNav value={tab} onChange={handleNavChange} />
       )}
 
-      <TxDetailModal tx={tx} onClose={() => setTx(null)} />
+      <TxDetailModal tx={selTx} onClose={() => setSelTx(null)} />
     </View>
   );
 }

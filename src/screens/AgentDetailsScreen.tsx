@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppBar } from "../components/AppBar";
 import { Card } from "../components/Card";
@@ -6,35 +6,47 @@ import { Badge } from "../components/Badge";
 import { CircularProgress } from "../components/CircularProgress";
 import { SectionHead } from "../components/SectionHead";
 import { Button, IconButton } from "../components/Button";
-import { TxRow } from "../components/TxRow";
-import { fmtUSD, fmtNum, ACTIVITY } from "../lib/data";
-import type { Agent, Tx } from "../lib/data";
+import { fmtNum } from "../lib/data";
+import type { Agent } from "../lib/data";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
+import { EXPLORER_BASE, VAULT_ID } from "../lib/constants";
+
+type Tx = {
+  id: string; time: string; type: "Buy" | "Sell"; pair: string;
+  amount: string; value: string; price: string;
+  status: "confirmed" | "pending" | "failed";
+  gas: string; hash: string; agent: string;
+};
 
 interface Props {
-  agent: Agent;
-  onBack: () => void;
-  onRevoke: () => void;
+  agent:          Agent;
+  trades:         Tx[];
+  onBack:         () => void;
+  onRevoke:       () => void;
   onViewActivity: () => void;
-  onViewTx: (tx: Tx) => void;
+  onViewTx:       (tx: Tx) => void;
 }
 
-export function AgentDetailsScreen({ agent, onBack, onRevoke, onViewActivity, onViewTx }: Props) {
+function shortHash(h: string) {
+  return h.length > 12 ? `${h.slice(0, 6)}…${h.slice(-4)}` : h;
+}
+
+export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActivity, onViewTx }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const active  = agent.status === "active";
   const revoked = agent.status === "revoked";
-  const pct     = (agent.spent / agent.budget) * 100;
-  const txs     = ACTIVITY.filter((t) => t.agent === agent.name).slice(0, 3);
+  const pct     = (agent.spent / (agent.budget || 1)) * 100;
+  const txs     = trades.slice(0, 5);
 
-  const INFO_ROWS = [
-    ["Agent ID",    agent.id + "…2c91", true ],
-    ["Strategy",    agent.strategy,      false],
-    ["Protocol",    "Deepbook v3",       false],
-    ["Slippage",    `${agent.avgSlippage}%`,  false],
-    ["Created",     agent.created,       false],
-  ] as [string, string, boolean][];
+  const INFO_ROWS: [string, string, boolean][] = [
+    ["Vault ID",  shortHash(VAULT_ID), true ],
+    ["Strategy",  agent.strategy,      false],
+    ["Protocol",  "Deepbook v3",       false],
+    ["Network",   "Sui Testnet",       false],
+    ["Created",   agent.created,       false],
+  ];
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
@@ -51,30 +63,26 @@ export function AgentDetailsScreen({ agent, onBack, onRevoke, onViewActivity, on
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* hero ring */}
         <Card accent={active} style={{ alignItems: "center", padding: 24 }}>
           <Badge status={agent.status} />
           <View style={{ marginVertical: 18 }}>
             <CircularProgress
-              value={agent.spent} max={agent.budget} size={172} stroke={13}
-              valueText={`${fmtUSD(agent.spent)} / ${fmtUSD(agent.budget)}`}
-              caption="USDC budget"
+              value={agent.spent} max={agent.budget || 1} size={172} stroke={13}
+              valueText={`${agent.spent.toFixed(3)} / ${agent.budget.toFixed(2)}`}
+              caption="SUI budget"
               tone={pct > 90 ? "danger" : "brand"}
             />
           </View>
-          {!revoked && (
-            <View style={[s.timeWrap, { backgroundColor: colors.bg4 }]}>
-              <Ionicons name="time-outline" size={15} color={colors.text2} />
-              <Text style={[s.timeText, { color: colors.text2 }]}>{agent.timeLeft} remaining</Text>
-            </View>
-          )}
+          <View style={[s.timeWrap, { backgroundColor: colors.bg4 }]}>
+            <Ionicons name="repeat-outline" size={15} color={colors.text2} />
+            <Text style={[s.timeText, { color: colors.text2 }]}>{agent.trades} executions</Text>
+          </View>
         </Card>
 
-        {/* stats grid */}
         <View style={s.grid}>
           {[
             { label: "Total trades", val: String(agent.trades) },
-            { label: "Volume",       val: `$${fmtNum(agent.volume)}` },
+            { label: "Volume (SUI)", val: agent.volume.toFixed(3) },
             { label: "Success",      val: `${agent.successRate}%`, green: true },
           ].map(({ label, val, green }) => (
             <Card key={label} style={[s.statCard, { padding: 14 }]}>
@@ -84,7 +92,6 @@ export function AgentDetailsScreen({ agent, onBack, onRevoke, onViewActivity, on
           ))}
         </View>
 
-        {/* info rows */}
         <SectionHead>Agent info</SectionHead>
         <Card style={{ padding: 0, paddingHorizontal: 16 }}>
           {INFO_ROWS.map(([k, v, copy], i) => (
@@ -98,12 +105,26 @@ export function AgentDetailsScreen({ agent, onBack, onRevoke, onViewActivity, on
           ))}
         </Card>
 
-        {/* recent executions */}
         {txs.length > 0 && (
           <>
             <SectionHead action="View all" onAction={onViewActivity}>Recent executions</SectionHead>
             <Card style={{ padding: 4 }}>
-              {txs.map((tx) => <TxRow key={tx.id} tx={tx} onPress={() => onViewTx(tx)} />)}
+              {txs.map((tx, i) => (
+                <Pressable key={tx.id} onPress={() => onViewTx(tx)}
+                  style={[s.txRow, i < txs.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                  <View style={[s.txIco, { backgroundColor: "rgba(76,175,80,0.12)" }]}>
+                    <Ionicons name="arrow-down-outline" size={14} color="#4CAF50" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.txPair, { color: colors.text }]}>{tx.amount}</Text>
+                    <Text style={[s.txTime, { color: colors.text3 }]}>{tx.time}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={[s.txVal, { color: colors.text2 }]}>{tx.value}</Text>
+                    <Badge status={tx.status} />
+                  </View>
+                </Pressable>
+              ))}
             </Card>
           </>
         )}
@@ -111,7 +132,6 @@ export function AgentDetailsScreen({ agent, onBack, onRevoke, onViewActivity, on
         <View style={{ height: 16 }} />
       </ScrollView>
 
-      {/* sticky footer */}
       {!revoked && (
         <View style={[s.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
           <Button variant="secondary" block size="sm"
@@ -141,5 +161,10 @@ const s = StyleSheet.create({
   kvK:      { fontSize: 14 },
   kvRight:  { flexDirection: "row", alignItems: "center", gap: 6 },
   kvV:      { fontSize: 14, fontWeight: "600" },
+  txRow:    { flexDirection: "row", alignItems: "center", gap: 12, padding: 12 },
+  txIco:    { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  txPair:   { fontSize: 14, fontWeight: "600" },
+  txTime:   { fontSize: 12, marginTop: 2 },
+  txVal:    { fontSize: 13 },
   footer:   { flexDirection: "row", gap: 12, padding: 14, borderTopWidth: StyleSheet.hairlineWidth },
 });

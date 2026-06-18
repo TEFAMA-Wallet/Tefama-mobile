@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppBar } from "../components/AppBar";
 import { Card } from "../components/Card";
@@ -8,6 +8,7 @@ import { SectionHead } from "../components/SectionHead";
 import { STRATEGIES, fmtUSD } from "../lib/data";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
+import { runAgent } from "../lib/useOnchain";
 
 interface AgentData {
   name: string;
@@ -28,16 +29,36 @@ interface Props {
 }
 
 export function CreateAgentScreen({ onBack, onDone }: Props) {
-  const [step, setStep] = useState(0);
-  const [data, setData] = useState<AgentData>({ name: "SUI Accumulator", strategy: "DCA", budget: "500", window: "7 days", splits: "12", slip: 0.5, agree: false });
+  const [step, setStep]   = useState(0);
+  const [busy, setBusy]   = useState(false);
+  const [runMsg, setRunMsg] = useState("");
+  const [data, setData] = useState<AgentData>({ name: "DCA Agent", strategy: "DCA", budget: "0.3", window: "Continuous", splits: "1", slip: 0.5, agree: false });
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
   const set = <K extends keyof AgentData>(k: K, v: AgentData[K]) => setData((d) => ({ ...d, [k]: v }));
-  const canNext = step === 3 ? data.agree : true;
+  const canNext = step === 3 ? data.agree && !busy : true;
 
-  function handleNext() {
-    if (step < 3) { setStep(step + 1); } else { onDone(); }
+  async function handleNext() {
+    if (step < 3) { setStep(step + 1); return; }
+    setBusy(true);
+    setRunMsg("");
+    try {
+      const result = await runAgent();
+      if (result.success) {
+        setRunMsg(`Trade executed! TX: ${result.digest?.slice(0, 8)}…`);
+        setTimeout(onDone, 1200);
+      } else if (result.skipped) {
+        setRunMsg(`Skipped: ${result.reason}`);
+        setTimeout(onDone, 1500);
+      } else {
+        setRunMsg(result.error ?? "Unknown error");
+        setBusy(false);
+      }
+    } catch (e) {
+      setRunMsg(String(e));
+      setBusy(false);
+    }
   }
 
   function handleBack() {
@@ -227,10 +248,13 @@ export function CreateAgentScreen({ onBack, onDone }: Props) {
 
       {/* sticky footer */}
       <View style={[s.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+        {runMsg ? (
+          <Text style={[s.runMsg, { color: runMsg.startsWith("Trade") || runMsg.startsWith("Skipped") ? "#4CAF50" : "#D44B2A" }]}>{runMsg}</Text>
+        ) : null}
         <Button variant="primary" size="lg" block disabled={!canNext} onPress={handleNext}
-          icon={step === 3 ? <Ionicons name="shield-checkmark-outline" size={18} color="#fff" /> : undefined}
+          icon={busy ? <ActivityIndicator size={16} color="#fff" /> : step === 3 ? <Ionicons name="shield-checkmark-outline" size={18} color="#fff" /> : undefined}
           iconRight={step < 3 ? <Ionicons name="arrow-forward" size={18} color="#fff" /> : undefined}>
-          {step === 3 ? "Confirm & sign" : "Continue"}
+          {busy ? "Running agent…" : step === 3 ? "Run DCA agent" : "Continue"}
         </Button>
       </View>
     </View>
@@ -283,5 +307,6 @@ const s = StyleSheet.create({
   agreeRow:  { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   checkbox:  { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 2 },
   agreeText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  footer:    { padding: 14, borderTopWidth: StyleSheet.hairlineWidth },
+  footer:    { padding: 14, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
+  runMsg:    { fontSize: 13, textAlign: "center", fontWeight: "600" },
 });
