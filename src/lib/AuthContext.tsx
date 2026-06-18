@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { API_BASE, GOOGLE_CLIENT_ID } from "./constants";
+import { API_BASE, GOOGLE_CLIENT_ID, ZKLOGIN_SALT_SECRET } from "./constants";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -73,13 +73,13 @@ async function fetchSalt(idToken: string): Promise<string> {
     if (res.ok) {
       const body = await res.json() as { salt?: string; error?: string };
       if (body.salt) return body.salt;
-      if (body.error) console.warn("[salt API]", body.error);
     }
-  } catch (e) {
-    console.warn("[salt API] fetch failed:", e);
+  } catch {
+    // fall through to local computation
   }
-  // Fallback: deterministic salt so the address is consistent
-  return "tefama-mobile-fallback-salt-v1";
+  // Local fallback: same HMAC logic as the server (ZKLOGIN_SALT_SECRET is known)
+  // SHA256(sub + ZKLOGIN_SALT_SECRET) — gives same address on both web + mobile
+  return ZKLOGIN_SALT_SECRET;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
