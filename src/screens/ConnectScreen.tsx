@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated, Dimensions, Image, Pressable, StyleSheet, Text, View,
+  Animated, Dimensions, Image, Linking, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -141,8 +141,9 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
 
         <Text style={s.legal}>
           By continuing you agree to our{" "}
-          <Text style={s.legalLink}>Terms</Text> and{" "}
-          <Text style={s.legalLink}>Privacy Policy</Text>
+          <Text style={s.legalLink} onPress={() => Linking.openURL("https://tefama-website.vercel.app/terms")}>Terms</Text>
+          {" "}and{" "}
+          <Text style={s.legalLink} onPress={() => Linking.openURL("https://tefama-website.vercel.app/privacy")}>Privacy Policy</Text>
         </Text>
       </Animated.View>
     </View>
