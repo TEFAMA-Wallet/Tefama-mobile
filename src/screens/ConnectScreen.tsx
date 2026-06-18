@@ -1,28 +1,21 @@
 import { useState } from "react";
-import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { Button } from "../components/Button";
-import { BrandLogo } from "../components/BrandLogo";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { useAuth } from "../lib/AuthContext";
 
-const { height: H } = Dimensions.get("window");
-
-function GoogleG() {
+function GoogleGlyph() {
   return (
-    <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ fontSize: 13, fontWeight: "900", color: "#4285F4" }}>G</Text>
+    <View style={{ width: 20, height: 20 }}>
+      <Image
+        source={{ uri: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNMjIuNTYgMTIuMjVjMC0uNzgtLjA3LTEuNTMtLjItMi4yNUgxMnY0LjI2aDUuOTJjLS4yNiAxLjM3LTEuMDQgMi41My0yLjIxIDMuMzF2Mi43N2gzLjU3YzIuMDgtMS45MiAzLjI4LTQuNzQgMy4yOC04LjA5eiIvPjxwYXRoIGZpbGw9IiMzNEE4NTMiIGQ9Ik0xMiAyM2MyLjk3IDAgNS40Ni0uOTggNy4yOC0yLjY2bC0zLjU3LTIuNzdjLS45OC42Ni0yLjIzIDEuMDYtMy43MSAxLjA2LTIuODYgMC01LjI5LTEuOTMtNi4xNi00LjUzSDIuMTh2Mi44NEMzLjk5IDIwLjUzIDcuNyAyMyAxMiAyM3oiLz48cGF0aCBmaWxsPSIjRkJCQzA1IiBkPSJNNS44NCAxNC4wOWMtLjIyLS42Ni0uMzUtMS4zNi0uMzUtMi4wOXMuMTMtMS40My4zNS0yLjA5VjcuMDdIMi4xOEMxLjQzIDguNTUgMSAxMC4yMiAxIDEycy40MyAzLjQ1IDEuMTggNC45M2wyLjg1LTIuMjIuODEtLjYyeiIvPjxwYXRoIGZpbGw9IiNFQTQzMzUiIGQ9Ik0xMiA1LjM4YzEuNjIgMCAzLjA2LjU2IDQuMjEgMS42NGwzLjE1LTMuMTVDMTcuNDUgMi4wOSAxNC45NyAxIDEyIDEgNy43IDEgMy45OSAzLjQ3IDIuMTggNy4wN2wzLjY2IDIuODRjLjg3LTIuNiAzLjMtNC41MyA2LjE2LTQuNTN6Ii8+PC9zdmc+" }}
+        style={{ width: 20, height: 20 }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
-
-const FEATURES = [
-  { icon: "hardware-chip-outline" as const, text: "Agents trade on your behalf, 24/7" },
-  { icon: "shield-checkmark-outline" as const, text: "Hard on-chain budget cap — never exceeded" },
-  { icon: "flash-off-outline" as const, text: "One-tap revoke, funds back instantly" },
-];
 
 export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   const { isDark } = useColorTheme();
@@ -45,88 +38,98 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   }
 
   return (
-    <View style={[s.root, { backgroundColor: colors.bg }]}>
-
-      {/* Top ambient gradient */}
-      <LinearGradient
-        colors={["rgba(255,140,0,0.12)", "transparent"]}
-        style={s.topGlow}
-        pointerEvents="none"
-      />
-
-      {/* Logo section */}
-      <View style={s.logoSection}>
-        <BrandLogo size={80} />
-        <Text style={[s.brand, { color: colors.text }]}>TEFAMA</Text>
-        <Text style={[s.tagline, { color: colors.text2 }]}>Autonomous trading agents</Text>
+    <ScrollView
+      contentContainerStyle={[s.root, { backgroundColor: colors.bg }]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Logo + wordmark */}
+      <View style={s.logoRow}>
+        <Image
+          source={require("../../assets/branding/logo-mark.png")}
+          style={{ width: 32, height: 32 }}
+          resizeMode="contain"
+        />
+        <Text style={[s.logoWord, { color: colors.text }]}>TEFAMA</Text>
       </View>
 
-      {/* Feature pills */}
-      <View style={s.features}>
-        {FEATURES.map(({ icon, text }) => (
-          <View key={text} style={[s.featureRow, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
-            <View style={[s.featureIco, { backgroundColor: colors.accent }]}>
-              <Ionicons name={icon} size={13} color="#fff" />
-            </View>
-            <Text style={[s.featureText, { color: colors.text }]}>{text}</Text>
-          </View>
-        ))}
-      </View>
+      {/* Card */}
+      <View style={[s.card, { backgroundColor: colors.bg3, borderColor: colors.border2 }]}>
+        <Text style={[s.cardTitle, { color: colors.text }]}>Connect your wallet</Text>
+        <Text style={[s.cardSub, { color: colors.text2 }]}>No password. No seed phrases.</Text>
 
-      {/* Auth section */}
-      <View style={s.authSection}>
+        {/* Info box */}
+        <View style={[s.infoBox, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
+          <Text style={[s.infoText, { color: colors.text2 }]}>
+            TEFAMA uses zkLogin for secure, privacy-preserving sign-in. Your funds stay in your wallet — we never access your private keys.
+          </Text>
+        </View>
+
         {error ? (
-          <View style={[s.errBox, { backgroundColor: "rgba(212,75,42,0.10)", borderColor: "rgba(212,75,42,0.25)" }]}>
-            <Ionicons name="alert-circle-outline" size={14} color="#D44B2A" />
-            <Text style={[s.errText, { color: "#D44B2A" }]}>{error}</Text>
+          <View style={[s.errBox, { backgroundColor: colors.redDim, borderColor: "rgba(239,68,68,0.25)" }]}>
+            <Ionicons name="alert-circle-outline" size={15} color={colors.red} style={{ flexShrink: 0, marginTop: 1 }} />
+            <Text style={[s.errText, { color: colors.red }]}>{error}</Text>
           </View>
         ) : null}
 
-        <Button
-          variant="primary" size="lg" block
+        {/* Google button */}
+        <Pressable
+          style={[s.providerBtn, { backgroundColor: colors.bg4, borderColor: colors.border2 }]}
           onPress={handleGoogle}
-          icon={busy ? <ActivityIndicator size={16} color="#fff" /> : <GoogleG />}
+          disabled={busy}
         >
-          {busy ? "Connecting…" : "Continue with Google"}
-        </Button>
-
-        <Button
-          variant="secondary" size="lg" block
-          onPress={() => {}}
-          icon={<Ionicons name="logo-apple" size={18} color={isDark ? "#fff" : "#000"} />}
-        >
-          Continue with Apple  ·  coming soon
-        </Button>
-
-        <View style={s.zkRow}>
-          <Ionicons name="lock-closed-outline" size={12} color={colors.text3} />
-          <Text style={[s.zkText, { color: colors.text3 }]}>
-            Secured by <Text style={{ color: colors.text2 }}>zkLogin</Text> · no seed phrases · self-custodial
+          {busy
+            ? <ActivityIndicator size={18} color={colors.accent} />
+            : <GoogleGlyph />
+          }
+          <Text style={[s.providerText, { color: colors.text }]}>
+            {busy ? "Preparing login…" : "Sign in with Google"}
           </Text>
-        </View>
+        </Pressable>
+
+        {/* Apple button (disabled) */}
+        <Pressable
+          style={[s.providerBtn, { backgroundColor: colors.bg4, borderColor: colors.border2, opacity: 0.4 }]}
+          disabled
+        >
+          <Ionicons name="logo-apple" size={18} color={colors.text} />
+          <Text style={[s.providerText, { color: colors.text }]}>
+            Sign in with Apple
+          </Text>
+          <Text style={[s.comingSoon, { color: colors.text4 }]}>coming soon</Text>
+        </Pressable>
+
+        <Text style={[s.legal, { color: colors.text3 }]}>
+          By continuing you agree to our{" "}
+          <Text style={{ color: colors.accent }}>Terms</Text>
+          {" "}and{" "}
+          <Text style={{ color: colors.accent }}>Privacy Policy</Text>.
+        </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  root:        { flex: 1, paddingHorizontal: 24 },
+  root:         { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 24 },
 
-  topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: H * 0.35 },
+  logoRow:      { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 28 },
+  logoWord:     { fontSize: 18, fontWeight: "700", letterSpacing: 1.5 },
 
-  logoSection: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, marginTop: 24 },
-  brand:       { fontSize: 32, fontWeight: "900", letterSpacing: 6 },
-  tagline:     { fontSize: 15, fontWeight: "400" },
+  card:         { width: "100%", maxWidth: 400, borderRadius: 18, borderWidth: 1, padding: 28, gap: 0 },
+  cardTitle:    { fontSize: 22, fontWeight: "700", textAlign: "center", marginBottom: 6 },
+  cardSub:      { fontSize: 14, textAlign: "center", marginBottom: 22 },
 
-  features:    { gap: 8, marginBottom: 28 },
-  featureRow:  { flexDirection: "row", alignItems: "center", gap: 12, padding: 13, borderRadius: 14, borderWidth: 1 },
-  featureIco:  { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  featureText: { fontSize: 14, fontWeight: "500", flex: 1 },
+  infoBox:      { flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 18, alignItems: "flex-start" },
+  infoText:     { flex: 1, fontSize: 13, lineHeight: 20 },
 
-  authSection: { gap: 10, paddingBottom: 36 },
-  errBox:      { flexDirection: "row", gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "flex-start" },
-  errText:     { flex: 1, fontSize: 13, lineHeight: 18 },
+  errBox:       { flexDirection: "row", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 14, alignItems: "flex-start" },
+  errText:      { flex: 1, fontSize: 13, lineHeight: 18 },
 
-  zkRow:   { flexDirection: "row", alignItems: "center", gap: 5, justifyContent: "center", paddingTop: 4 },
-  zkText:  { fontSize: 12, textAlign: "center", lineHeight: 17 },
+  providerBtn:  { flexDirection: "row", alignItems: "center", gap: 12, height: 48, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, marginBottom: 10 },
+  providerText: { flex: 1, fontSize: 15, fontWeight: "500" },
+  comingSoon:   { fontSize: 11 },
+
+  legal:        { fontSize: 12, textAlign: "center", lineHeight: 18, marginTop: 16 },
 });

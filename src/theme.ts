@@ -1,65 +1,73 @@
+// Matches globals.css exactly — brand is soft cyan (#06b6d4 / #22d3ee)
+
 const darkColors = {
-  bg:         "#0A0600",
-  bg2:        "#100900",
-  bg3:        "#160C00",
-  bg4:        "#1E1000",
-  border:     "rgba(255,140,0,0.10)",
-  border2:    "rgba(255,140,0,0.18)",
-  text:       "#F5F0E8",
-  text2:      "rgba(245,240,232,0.55)",
-  text3:      "rgba(245,240,232,0.28)",
-  accent:     "#FF8C00",
-  accent2:    "#FFB300",
-  accentDim:  "rgba(255,140,0,0.12)",
-  accentB:    "rgba(255,140,0,0.28)",
-  mint:       "#FFD060",
-  mintDim:    "rgba(255,208,96,0.12)",
-  gold:       "#FFB300",
-  goldDim:    "rgba(255,179,0,0.12)",
-  red:        "#D44B2A",
-  redDim:     "rgba(212,75,42,0.12)",
-  green:      "#7EC86A",
-  bgSoft:     "#100900",
-  bgCard:     "#100900",
-  bgCardAlt:  "#160C00",
-  textSoft:   "rgba(245,240,232,0.55)",
-  textMuted:  "rgba(245,240,232,0.28)",
-  danger:     "#D44B2A",
-  warning:    "#FFB300",
+  bg:         "#0a0a0a",   // --surface-base / --neutral-950
+  bg2:        "#101010",   // --neutral-900
+  bg3:        "#141414",   // --surface-card / --neutral-875
+  bg4:        "#181818",   // --surface-raised / --neutral-850
+  bg5:        "#1f1f1f",   // --surface-elevated / --neutral-800
+  border:     "rgba(255,255,255,0.06)",   // --border-subtle
+  border2:    "rgba(255,255,255,0.12)",   // --border-default
+  border3:    "rgba(255,255,255,0.18)",   // --border-strong
+  text:       "#fafafa",   // --text-primary
+  text2:      "#8a8a8a",   // --text-secondary
+  text3:      "#5c5c5c",   // --text-tertiary
+  text4:      "#3d3d3d",   // --text-disabled
+  accent:     "#06b6d4",   // --orange-500 (brand cyan)
+  accent2:    "#22d3ee",   // --orange-400
+  accentDim:  "rgba(6,182,212,0.12)",   // --brand-tint
+  accentB:    "rgba(6,182,212,0.22)",   // --brand-tint-strong
+  accentA40:  "rgba(6,182,212,0.42)",
+  red:        "#ef4444",   // --ember-500
+  redDim:     "rgba(239,68,68,0.14)",   // --status-revoked-tint
+  green:      "#06b6d4",   // confirmed = brand color
+  bgCard:     "#141414",
+  bgCardAlt:  "#181818",
+  bgSoft:     "rgba(255,255,255,0.04)",  // --white-a04 / --ink-a04
+  bgSoft2:    "rgba(255,255,255,0.06)",  // --ink-a06
+  bgSoft3:    "rgba(255,255,255,0.08)",  // --ink-a08
+  danger:     "#ef4444",
+  warning:    "#f59e0b",
+  ink04:      "rgba(255,255,255,0.04)",
+  ink08:      "rgba(255,255,255,0.08)",
+  ink12:      "rgba(255,255,255,0.12)",
 };
 
 const lightColors = {
-  bg:         "#FFF8F0",
-  bg2:        "#FFFFFF",
-  bg3:        "#FFEEDD",
-  bg4:        "#FFE4C4",
-  border:     "rgba(180,80,0,0.10)",
-  border2:    "rgba(180,80,0,0.18)",
-  text:       "#1A0A00",
-  text2:      "rgba(26,10,0,0.55)",
-  text3:      "rgba(26,10,0,0.35)",
-  accent:     "#CC5500",
-  accent2:    "#FF7000",
-  accentDim:  "rgba(204,85,0,0.10)",
-  accentB:    "rgba(204,85,0,0.22)",
-  mint:       "#CC8800",
-  mintDim:    "rgba(204,136,0,0.10)",
-  gold:       "#AA6600",
-  goldDim:    "rgba(170,102,0,0.10)",
-  red:        "#B03010",
-  redDim:     "rgba(176,48,16,0.10)",
-  green:      "#4A8A3A",
-  bgSoft:     "#FFEEDD",
-  bgCard:     "#FFFFFF",
-  bgCardAlt:  "#FFF8F0",
-  textSoft:   "rgba(26,10,0,0.55)",
-  textMuted:  "rgba(26,10,0,0.35)",
-  danger:     "#B03010",
-  warning:    "#AA6600",
+  bg:         "#f5f6fb",
+  bg2:        "#eceef6",
+  bg3:        "#ffffff",
+  bg4:        "#ffffff",
+  bg5:        "#ffffff",
+  border:     "rgba(0,0,0,0.07)",
+  border2:    "rgba(0,0,0,0.12)",
+  border3:    "rgba(0,0,0,0.18)",
+  text:       "#14161d",
+  text2:      "#565d6e",
+  text3:      "#868d9e",
+  text4:      "#aeb4c2",
+  accent:     "#0e7490",
+  accent2:    "#06b6d4",
+  accentDim:  "rgba(14,116,144,0.10)",
+  accentB:    "rgba(14,116,144,0.20)",
+  accentA40:  "rgba(14,116,144,0.40)",
+  red:        "#dc2626",
+  redDim:     "rgba(220,38,38,0.12)",
+  green:      "#0e7490",
+  bgCard:     "#ffffff",
+  bgCardAlt:  "#f5f6fb",
+  bgSoft:     "rgba(0,0,0,0.03)",
+  bgSoft2:    "rgba(0,0,0,0.05)",
+  bgSoft3:    "rgba(0,0,0,0.07)",
+  danger:     "#dc2626",
+  warning:    "#d97706",
+  ink04:      "rgba(0,0,0,0.04)",
+  ink08:      "rgba(0,0,0,0.07)",
+  ink12:      "rgba(0,0,0,0.12)",
 };
 
 const shape = {
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 },
+  radius: { xs: 6, sm: 10, md: 14, lg: 18, xl: 24, xxl: 30 },
   space:  { xs: 4, sm: 8, md: 14, lg: 20, xl: 28 },
 };
 

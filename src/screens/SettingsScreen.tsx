@@ -1,150 +1,167 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { useAuth } from "../lib/AuthContext";
+import type { Vault } from "../lib/useOnchain";
+import { useState } from "react";
 
-function shortAddr(addr: string) {
-  return addr.length > 16 ? `${addr.slice(0, 10)}…${addr.slice(-6)}` : addr;
-}
+interface Props { vault: Vault | null }
 
-function initials(name: string) {
-  const parts = name.split(" ");
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase();
-}
-
-interface RowProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value?: string;
-  toggle?: boolean;
-  defaultToggle?: boolean;
-  danger?: boolean;
-  last?: boolean;
-  onPress?: () => void;
-}
-
-function Row({ icon, label, value, toggle, defaultToggle, danger, last, onPress }: RowProps) {
-  const { isDark } = useColorTheme();
-  const { colors } = getTheme(isDark);
-  const color = danger ? "#D44B2A" : colors.text;
-  const iconColor = danger ? "#D44B2A" : colors.text3;
-
-  return (
-    <Pressable onPress={onPress}
-      style={[s.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-      <View style={[s.rowIcon, { backgroundColor: danger ? "rgba(212,75,42,0.10)" : colors.accentDim }]}>
-        <Ionicons name={icon} size={16} color={danger ? "#D44B2A" : colors.accent} />
-      </View>
-      <Text style={[s.rowLabel, { color, flex: 1 }]}>{label}</Text>
-      {value && <Text style={[s.rowValue, { color: colors.text2 }]}>{value}</Text>}
-      {toggle && <Switch value={defaultToggle} thumbColor="#fff" trackColor={{ false: colors.bg4, true: colors.accent }} />}
-      {!toggle && <Ionicons name="chevron-forward" size={14} color={colors.text3} />}
-    </Pressable>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Toggle({ on }: { on: boolean }) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   return (
-    <View style={s.section}>
-      <Text style={[s.sectionLabel, { color: colors.text2 }]}>{title}</Text>
-      <View style={[s.sectionCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-        {children}
-      </View>
+    <View style={[tog.track, { backgroundColor: on ? colors.accent : colors.bg5 }]}>
+      <View style={[tog.thumb, { left: on ? 22 : 3 }]} />
     </View>
   );
 }
 
-export function SettingsScreen() {
+function SettingRow({ label, desc, right }: { label: string; desc?: string; right: React.ReactNode }) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
+  return (
+    <View style={[sr.row, { borderBottomColor: colors.border }]}>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text style={[sr.label, { color: colors.text }]}>{label}</Text>
+        {desc ? <Text style={[sr.desc, { color: colors.text3 }]}>{desc}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
+  return (
+    <View style={[ir.row, { borderBottomColor: colors.border }]}>
+      <Text style={[ir.label, { color: colors.text3 }]}>{label}</Text>
+      <Text style={[ir.value, { color: colors.text, fontFamily: mono ? "monospace" : undefined }]}>{value}</Text>
+    </View>
+  );
+}
+
+function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
+  return (
+    <View style={[sh.wrap, { borderBottomColor: colors.border }]}>
+      <View style={{ color: colors.accent } as any}>{icon}</View>
+      <Text style={[sh.title, { color: colors.text }]}>{title}</Text>
+    </View>
+  );
+}
+
+export function SettingsScreen({ vault }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
+  const [notifs, setNotifs] = useState({ budget: true, trade: true, weekly: false });
+  const [security, setSecurity] = useState({ biometric: true, lock: false });
 
-  const name     = session?.name    ?? "Guest";
-  const email    = session?.email   ?? "Not signed in";
-  const address  = session?.address ?? "";
+  const name  = session?.name    ?? "—";
+  const email = session?.email   ?? "—";
+  const pic   = session?.picture ?? "";
+  const addr  = session?.address ?? "";
+  const shortAddr = addr ? `${addr.slice(0, 10)}…${addr.slice(-8)}` : "—";
+  const vaultStatus = !vault ? "No vault" : vault.paused ? "Paused" : "Active";
 
   function handleLogout() {
-    Alert.alert("Sign out", "You'll be returned to the sign-in screen.", [
+    Alert.alert("Disconnect", "You will be returned to the sign-in screen.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: logout },
+      { text: "Disconnect", style: "destructive", onPress: logout },
     ]);
   }
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={[s.headerTitle, { color: colors.text }]}>Profile</Text>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
+        <Text style={[s.pageTitle, { color: colors.text }]}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Profile card */}
-        <LinearGradient
-          colors={["#1A0900", "#0A0600"]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[s.profileCard, { borderColor: "rgba(255,140,0,0.22)" }]}
-        >
-          {/* Avatar */}
-          <View style={s.avatarWrap}>
-            <LinearGradient colors={[colors.accent, colors.accent2]} style={s.avatar}>
-              <Text style={s.avatarText}>{initials(name)}</Text>
-            </LinearGradient>
-            <View style={[s.onlineDot, { borderColor: colors.bg2 }]} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={s.profileName}>{name}</Text>
-            <Text style={s.profileEmail}>{email}</Text>
-            {address ? (
-              <View style={s.addressRow}>
-                <Ionicons name="wallet-outline" size={11} color="rgba(245,240,232,0.4)" />
-                <Text style={s.profileAddress}>{shortAddr(address)}</Text>
+        {/* Profile hero */}
+        <View style={[s.profileCard, { backgroundColor: colors.bg3, borderColor: colors.border2 }]}>
+          <View style={s.profileRow}>
+            {pic ? (
+              <Image source={{ uri: pic }} style={s.avatar} />
+            ) : (
+              <View style={[s.avatarPlaceholder, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
+                <Ionicons name="person" size={26} color={colors.accent} />
               </View>
-            ) : null}
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={[s.profileName, { color: colors.text }]}>{name}</Text>
+              <Text style={[s.profileEmail, { color: colors.text2 }]}>{email}</Text>
+              <View style={[s.zkBadge, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
+                <Text style={[s.zkText, { color: colors.accent }]}>zkLogin · Google</Text>
+              </View>
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={[s.netLabel, { color: colors.text3 }]}>Network</Text>
+              <Text style={[s.netVal, { color: colors.accent }]}>Sui Testnet</Text>
+            </View>
           </View>
+        </View>
 
-          <View style={[s.networkBadge]}>
-            <View style={s.networkDot} />
-            <Text style={s.networkText}>Testnet</Text>
-          </View>
-        </LinearGradient>
+        {/* Wallet section */}
+        <View style={[s.section, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <SectionHead icon={<Ionicons name="wallet-outline" size={18} color={colors.accent} />} title="Wallet" />
+          <InfoRow label="Address"      value={shortAddr}    mono />
+          <InfoRow label="Vault status" value={vaultStatus}       />
+          <InfoRow label="Network"      value="Sui Testnet"       />
+          <Pressable style={s.explorerLink}>
+            <Text style={[s.explorerText, { color: colors.accent }]}>View on Explorer</Text>
+            <Ionicons name="open-outline" size={13} color={colors.accent} />
+          </Pressable>
+        </View>
 
-        <Section title="AGENT">
-          <Row icon="flash-outline"    label="DCA clip size"     value="0.3 SUI / trade" last />
-        </Section>
+        {/* Notifications */}
+        <View style={[s.section, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <SectionHead icon={<Ionicons name="notifications-outline" size={18} color={colors.accent} />} title="Notifications" />
+          <SettingRow
+            label="Budget warning"
+            desc="Alert when vault budget reaches 80%"
+            right={<Pressable onPress={() => setNotifs(n => ({ ...n, budget: !n.budget }))}><Toggle on={notifs.budget} /></Pressable>}
+          />
+          <SettingRow
+            label="Trade execution"
+            desc="Notify on each on-chain trade"
+            right={<Pressable onPress={() => setNotifs(n => ({ ...n, trade: !n.trade }))}><Toggle on={notifs.trade} /></Pressable>}
+          />
+          <SettingRow
+            label="Weekly report"
+            desc="Summary every Sunday"
+            right={<Pressable onPress={() => setNotifs(n => ({ ...n, weekly: !n.weekly }))}><Toggle on={notifs.weekly} /></Pressable>}
+          />
+        </View>
 
-        <Section title="NOTIFICATIONS">
-          <Row icon="notifications-outline" label="Trade alerts"    toggle defaultToggle />
-          <Row icon="warning-outline"       label="Budget warnings" toggle defaultToggle last />
-        </Section>
+        {/* Security */}
+        <View style={[s.section, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <SectionHead icon={<Ionicons name="shield-outline" size={18} color={colors.accent} />} title="Security" />
+          <SettingRow
+            label="Biometric unlock"
+            desc="Use Face ID or fingerprint"
+            right={<Pressable onPress={() => setSecurity(sc => ({ ...sc, biometric: !sc.biometric }))}><Toggle on={security.biometric} /></Pressable>}
+          />
+          <SettingRow
+            label="Session lock"
+            desc="Auto-lock after 5 minutes"
+            right={<Pressable onPress={() => setSecurity(sc => ({ ...sc, lock: !sc.lock }))}><Toggle on={security.lock} /></Pressable>}
+          />
+        </View>
 
-        <Section title="APPEARANCE">
-          <Row icon="moon-outline" label="Dark mode" toggle defaultToggle last />
-        </Section>
-
-        <Section title="NETWORK">
-          <Row icon="wifi-outline"    label="Network" value="Sui Testnet" />
-          <Row icon="server-outline"  label="RPC"     value="DeepBook" last />
-        </Section>
-
-        <Section title="ABOUT">
-          <Row icon="document-text-outline"      label="Terms of service"  />
-          <Row icon="shield-outline"             label="Privacy policy"    />
-          <Row icon="information-circle-outline" label="Version" value="1.0.0" last />
-        </Section>
-
-        {session ? (
-          <Section title="ACCOUNT">
-            <Row icon="log-out-outline" label="Sign out" danger last onPress={handleLogout} />
-          </Section>
-        ) : null}
+        {/* Disconnect */}
+        <Pressable
+          style={[s.disconnectBtn, { backgroundColor: colors.redDim, borderColor: "rgba(239,68,68,0.25)" }]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={17} color={colors.red} />
+          <Text style={[s.disconnectText, { color: colors.red }]}>Disconnect</Text>
+        </Pressable>
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -152,32 +169,49 @@ export function SettingsScreen() {
   );
 }
 
+const tog = StyleSheet.create({
+  track: { width: 44, height: 24, borderRadius: 12, position: "relative" },
+  thumb: { position: "absolute", top: 3, width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff" },
+});
+
+const sr = StyleSheet.create({
+  row:   { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth },
+  label: { fontSize: 14, fontWeight: "500" },
+  desc:  { fontSize: 12, marginTop: 2, lineHeight: 17 },
+});
+
+const ir = StyleSheet.create({
+  row:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  label: { fontSize: 13 },
+  value: { fontSize: 13 },
+});
+
+const sh = StyleSheet.create({
+  wrap:  { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 14, borderBottomWidth: 1, marginBottom: 4 },
+  title: { fontSize: 15, fontWeight: "600" },
+});
+
 const s = StyleSheet.create({
   root:   { flex: 1 },
-  scroll: { padding: 16, gap: 0 },
+  scroll: { padding: 16, gap: 14 },
+  header:    { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
 
-  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
-  headerTitle: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
+  profileCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
+  profileRow:  { flexDirection: "row", alignItems: "center", gap: 14 },
+  avatar:      { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: "#22d3ee" },
+  avatarPlaceholder: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", borderWidth: 2 },
+  profileName: { fontSize: 17, fontWeight: "700", marginBottom: 2 },
+  profileEmail:{ fontSize: 13, marginBottom: 6 },
+  zkBadge:     { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 100, borderWidth: 1 },
+  zkText:      { fontSize: 12, fontWeight: "600" },
+  netLabel:    { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 },
+  netVal:      { fontSize: 13, fontWeight: "600" },
 
-  profileCard: { borderRadius: 20, borderWidth: 1, padding: 18, flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
-  avatarWrap:  { position: "relative" },
-  avatar:      { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  avatarText:  { color: "#fff", fontSize: 18, fontWeight: "800" },
-  onlineDot:   { position: "absolute", bottom: 0, right: 0, width: 14, height: 14, borderRadius: 7, backgroundColor: "#4CAF50", borderWidth: 2 },
-  profileName: { color: "rgba(245,240,232,0.90)", fontSize: 16, fontWeight: "800" },
-  profileEmail:{ color: "rgba(245,240,232,0.45)", fontSize: 12, marginTop: 2 },
-  addressRow:  { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  profileAddress: { color: "rgba(245,240,232,0.35)", fontSize: 11, fontFamily: "monospace" },
-  networkBadge:{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, backgroundColor: "rgba(76,175,80,0.14)", alignSelf: "flex-start" },
-  networkDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: "#4CAF50" },
-  networkText: { color: "#4CAF50", fontSize: 11, fontWeight: "700" },
+  section:       { borderRadius: 14, borderWidth: 1, padding: 16 },
+  explorerLink:  { flexDirection: "row", alignItems: "center", gap: 5, paddingTop: 14 },
+  explorerText:  { fontSize: 14, fontWeight: "500" },
 
-  section:      { marginBottom: 16 },
-  sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, marginBottom: 6, marginLeft: 4 },
-  sectionCard:  { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-
-  row:       { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
-  rowIcon:   { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  rowLabel:  { fontSize: 15 },
-  rowValue:  { fontSize: 14 },
+  disconnectBtn:  { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: 10, borderWidth: 1 },
+  disconnectText: { fontSize: 14, fontWeight: "600" },
 });

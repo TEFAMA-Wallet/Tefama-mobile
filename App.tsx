@@ -8,7 +8,7 @@ import { AuthProvider } from "./src/lib/AuthContext";
 function Inner() {
   const { isDark } = useColorTheme();
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={[s.safe, { backgroundColor: isDark ? "#0A0600" : "#FFF8F0" }]}>
+    <SafeAreaView edges={["top", "left", "right"]} style={[s.safe, { backgroundColor: isDark ? "#0a0a0a" : "#f5f6fb" }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <AppContainer />
     </SafeAreaView>

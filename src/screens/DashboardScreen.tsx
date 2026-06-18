@@ -1,238 +1,221 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Defs, LinearGradient as SvgGrad, Path, Stop } from "react-native-svg";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
-import type { Agent, Tx } from "../lib/data";
+import { useAuth } from "../lib/AuthContext";
+import type { Tx } from "../lib/data";
 import type { Vault } from "../lib/useOnchain";
 
 interface Props {
-  // price
   price:         number;
   deepPrice:     number;
   change24h:     number;
   deepChange24h: number;
   priceLoading:  boolean;
-  // wallet
   suiBalance:    number;
   usdcBalance:   number;
   deepBalance:   number;
   vault:         Vault | null;
   walletLoading: boolean;
-  // trades
   trades:        Tx[];
   tradeCount:    number;
   tradePnl:      number;
+  tradeRoi:      number;
   tradeLoading:  boolean;
-  // agent
-  liveAgent:     Agent;
-  // nav
   onViewAgent:    () => void;
   onViewActivity: () => void;
   onViewTx:       (tx: Tx) => void;
 }
 
-function MiniSparkline({ prices }: { prices: number[] }) {
-  if (prices.length < 2) return <View style={{ height: 32, width: 120 }} />;
-  const W = 120, H = 32;
-  const max = Math.max(...prices), min = Math.min(...prices);
-  const pts = prices.map((v, i) => [
-    (i / (prices.length - 1)) * W,
-    H - 2 - ((v - min) / ((max - min) || 1)) * (H - 6),
-  ]);
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
-  const area = `${line} L${W} ${H} L0 ${H} Z`;
+function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
   return (
-    <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-      <Defs>
-        <SvgGrad id="ms" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%"   stopColor="rgba(255,255,255,0.3)" />
-          <Stop offset="100%" stopColor="rgba(255,255,255,0)"   />
-        </SvgGrad>
-      </Defs>
-      <Path d={area} fill="url(#ms)" />
-      <Path d={line} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
+    <View style={{ width: w as any, height: h, borderRadius: 5, backgroundColor: colors.bgSoft3 }} />
+  );
+}
+
+function usd(n: number, decimals = 2) {
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function StatCard({ label, icon, value, delta, deltaUp, sub, loading }: {
+  label: string; icon: keyof typeof Ionicons.glyphMap;
+  value: string; delta?: string; deltaUp?: boolean; sub?: string; loading?: boolean;
+}) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
+  return (
+    <View style={[s.statCard, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+      <View style={s.statTop}>
+        <Text style={[s.statLabel, { color: colors.text2 }]}>{label}</Text>
+        <Ionicons name={icon} size={17} color={colors.text3} />
+      </View>
+      {loading ? <Skeleton w={110} h={26} /> : (
+        <Text style={[s.statValue, { color: colors.text }]}>{value}</Text>
+      )}
+      {delta && !loading && (
+        <Text style={[s.statDelta, { color: deltaUp ? colors.accent : colors.red }]}>{delta}</Text>
+      )}
+      {sub && !loading && (
+        <Text style={[s.statSub, { color: colors.text3 }]}>{sub}</Text>
+      )}
+    </View>
   );
 }
 
 export function DashboardScreen({
-  price, deepPrice, change24h, deepChange24h, priceLoading,
+  price, deepPrice, change24h, priceLoading,
   suiBalance, usdcBalance, deepBalance, vault, walletLoading,
-  trades, tradeCount, tradePnl, tradeLoading,
-  liveAgent,
+  trades, tradeCount, tradePnl, tradeRoi, tradeLoading,
   onViewAgent, onViewActivity, onViewTx,
 }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
+  const { session } = useAuth();
 
-  const pct       = vault ? Math.min((vault.spent / (vault.budgetCap || 1)) * 100, 100) : 0;
-  const deepValue = deepBalance * deepPrice;
-  const totalUsd  = suiBalance * price + usdcBalance + deepValue;
-  const isActive  = liveAgent.status === "active";
-  const sparkPrices = trades.slice(0, 10).map(t => Number(t.price)).filter(Boolean);
+  const totalUsd     = suiBalance * price + usdcBalance + deepBalance * deepPrice;
+  const loading      = walletLoading || priceLoading;
+  const budgetUsed   = vault ? Math.min(100, ((vault.spent ?? 0) / (vault.budgetCap ?? 1)) * 100) : 0;
+  const recent       = trades.slice(0, 6);
+  const firstName    = session?.name?.split(" ")[0] ?? "";
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
         <View>
-          <Text style={[s.greeting, { color: colors.text2 }]}>Your portfolio</Text>
-          <Text style={[s.totalVal, { color: colors.text }]}>${totalUsd > 0 ? totalUsd.toFixed(2) : "—"}</Text>
+          <Text style={[s.pageTitle, { color: colors.text }]}>Dashboard</Text>
+          <Text style={[s.pageSub, { color: colors.text2 }]}>
+            {firstName ? `Welcome back, ${firstName}` : "Welcome back"} · live data from Sui testnet
+          </Text>
         </View>
-        <View style={s.headerRight}>
-          {priceLoading && <ActivityIndicator size="small" color={colors.accent} />}
-          <Pressable style={[s.iconBtn, { backgroundColor: colors.accentDim }]} hitSlop={8}>
-            <Ionicons name="notifications-outline" size={20} color={colors.accent} />
-          </Pressable>
-        </View>
+        <Pressable style={[s.newAgentBtn, { backgroundColor: colors.accent }]} onPress={onViewAgent}>
+          <Ionicons name="add" size={15} color="#fff" />
+          <Text style={s.newAgentText}>New agent</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Agent hero */}
-        <LinearGradient
-          colors={isActive ? ["#1A0900", "#FF8C0020"] : ["#160C00", "#160C00"]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[s.heroCard, { borderColor: isActive ? "rgba(255,140,0,0.30)" : colors.border }]}
-        >
-          <View style={s.heroTop}>
-            <View style={s.heroLeft}>
-              <View style={[s.agentDot, { backgroundColor: isActive ? "#4CAF50" : colors.text3 }]} />
-              <Text style={s.agentLabel}>{liveAgent.name}</Text>
-              <View style={[s.statusPill, { backgroundColor: isActive ? "rgba(76,175,80,0.18)" : "rgba(245,240,232,0.08)" }]}>
-                <Text style={[s.statusText, { color: isActive ? "#4CAF50" : colors.text2 }]}>
-                  {liveAgent.status.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <MiniSparkline prices={sparkPrices} />
-          </View>
+        {/* Stat grid */}
+        <View style={s.statGrid}>
+          <StatCard
+            label="Portfolio value" icon="wallet-outline"
+            value={usd(totalUsd, 2)}
+            delta={`SUI @ ${usd(price, 4)} · ${change24h >= 0 ? "+" : ""}${change24h.toFixed(2)}% 24h`}
+            deltaUp={change24h >= 0} loading={loading}
+          />
+          <StatCard
+            label="SUI balance" icon="trending-up-outline"
+            value={`${suiBalance.toFixed(4)} SUI`}
+            sub={`≈ ${usd(suiBalance * price, 2)}`}
+            loading={loading}
+          />
+          <StatCard
+            label="Total trades" icon="repeat-outline"
+            value={String(tradeCount)}
+            sub={tradeLoading ? undefined : tradeCount === 0 ? "No trades yet" : `Last: ${trades[0]?.time ?? "—"}`}
+            loading={tradeLoading}
+          />
+          <StatCard
+            label="P&L (unrealised)" icon="hardware-chip-outline"
+            value={`${tradePnl >= 0 ? "+" : ""}${usd(tradePnl, 4)}`}
+            delta={tradeCount > 0 ? `${tradeRoi >= 0 ? "+" : ""}${tradeRoi.toFixed(2)}% ROI · ${tradeCount} trades` : undefined}
+            deltaUp={tradePnl >= 0} loading={tradeLoading}
+          />
+        </View>
 
-          <View style={s.budgetSection}>
-            <View style={s.budgetRow}>
-              <Text style={s.budgetLabel}>Budget used</Text>
-              <Text style={s.budgetPct}>{pct.toFixed(0)}%</Text>
+        {/* Vault card */}
+        {vault && (
+          <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+            <View style={s.panelHead}>
+              <Text style={[s.panelTitle, { color: colors.text }]}>Vault · DCA agent</Text>
+              <Pressable onPress={onViewAgent}>
+                <View style={[s.statusBadge, {
+                  backgroundColor: vault.paused ? colors.bgSoft3 : colors.accentDim,
+                  borderColor: vault.paused ? colors.border : colors.accentB,
+                }]}>
+                  {!vault.paused && (
+                    <View style={[s.pulseDot, { backgroundColor: colors.accent }]} />
+                  )}
+                  <Text style={[s.statusText, { color: vault.paused ? colors.text2 : colors.accent }]}>
+                    {vault.paused ? "Paused" : "Running"}
+                  </Text>
+                </View>
+              </Pressable>
             </View>
-            <View style={s.barTrack}>
+            <View style={s.budgetRow}>
+              <Text style={[s.budgetLabel, { color: colors.text3 }]}>Budget used</Text>
+              <Text style={[s.budgetNum, { color: colors.text2, fontFamily: "monospace" }]}>
+                {(vault.spent ?? 0).toFixed(4)} / {(vault.budgetCap ?? 0).toFixed(4)} SUI
+              </Text>
+            </View>
+            <View style={[s.barTrack, { backgroundColor: colors.bgSoft3 }]}>
               <View style={[s.barFill, {
-                width: `${pct}%` as any,
-                backgroundColor: pct > 90 ? "#D44B2A" : pct > 70 ? "#FFB300" : "#FF8C00",
+                width: `${budgetUsed}%` as any,
+                backgroundColor: budgetUsed > 90 ? colors.red : colors.accent,
               }]} />
             </View>
-            <View style={s.budgetNums}>
-              <Text style={s.budgetSpent}>{vault ? vault.spent.toFixed(3) : "—"} SUI spent</Text>
-              <Text style={s.budgetCap}>/ {vault ? vault.budgetCap.toFixed(2) : "—"} SUI cap</Text>
+          </View>
+        )}
+
+        {/* Price + Recent trades row */}
+        <View style={s.twoCol}>
+          {/* Price card */}
+          <View style={[s.panel, s.pricePanel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+            <View style={s.panelHead}>
+              <Text style={[s.panelTitle, { color: colors.text }]}>SUI / USDC · DeepBook</Text>
+              <Text style={[s.liveTag, { color: colors.text3 }]}>live · testnet</Text>
+            </View>
+            {priceLoading ? <Skeleton w="100%" h={44} /> : (
+              <View style={s.priceRow}>
+                <Text style={[s.bigPrice, { color: colors.text, fontFamily: "monospace" }]}>{usd(price, 4)}</Text>
+                <Text style={[s.priceDelta, { color: change24h >= 0 ? colors.accent : colors.red, fontFamily: "monospace" }]}>
+                  {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+                </Text>
+              </View>
+            )}
+            <View style={s.priceMetaRow}>
+              <Text style={[s.priceMeta, { color: colors.text2 }]}>
+                DEEP <Text style={{ color: colors.text, fontFamily: "monospace" }}>{usd(deepPrice, 6)}</Text>
+              </Text>
             </View>
           </View>
 
-          <View style={s.heroStats}>
-            {[
-              { label: "Trades",   val: String(tradeCount || "—") },
-              { label: "DEEP acc", val: deepBalance > 0 ? deepBalance.toFixed(1) : "—" },
-              { label: "P&L",      val: tradePnl !== 0 ? `${tradePnl > 0 ? "+" : ""}${tradePnl.toFixed(3)}` : "—", green: tradePnl > 0 },
-            ].map(({ label, val, green }) => (
-              <View key={label} style={s.heroStat}>
-                <Text style={s.heroStatK}>{label}</Text>
-                <Text style={[s.heroStatV, green ? { color: "#4CAF50" } : {}]}>{val}</Text>
-              </View>
-            ))}
-          </View>
-
-          <Pressable style={s.heroBtn} onPress={onViewAgent}>
-            <Text style={s.heroBtnText}>View agent</Text>
-            <Ionicons name="chevron-forward" size={14} color="#FF8C00" />
-          </Pressable>
-        </LinearGradient>
-
-        {/* Balances */}
-        <View style={[s.balCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-          <Text style={[s.balTitle, { color: colors.text2 }]}>Wallet balances</Text>
-          {walletLoading && suiBalance === 0 ? (
-            <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-          ) : (
-            <>
-              {[
-                { symbol: "SUI",  amount: suiBalance,  usd: suiBalance * price,  color: colors.accent },
-                { symbol: "DEEP", amount: deepBalance, usd: deepValue,            color: "#7EC86A"     },
-                { symbol: "USDC", amount: usdcBalance, usd: usdcBalance,          color: "#4A8FD4"     },
-              ].map(({ symbol, amount, usd, color }, i, arr) => (
-                <View key={symbol} style={[s.balRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                  <View style={[s.balDot, { backgroundColor: color }]} />
-                  <Text style={[s.balSymbol, { color: colors.text }]}>{symbol}</Text>
-                  <Text style={[s.balAmount, { color: colors.text2 }]}>{amount.toFixed(3)}</Text>
-                  <Text style={[s.balUsd, { color: colors.text }]}>${usd.toFixed(2)}</Text>
-                </View>
-              ))}
-              <View style={[s.balTotal, { borderTopColor: colors.border2 }]}>
-                <Text style={[s.balTotalLabel, { color: colors.text2 }]}>Total</Text>
-                <Text style={[s.balTotalVal, { color: colors.text }]}>${totalUsd.toFixed(2)}</Text>
-              </View>
-            </>
-          )}
-        </View>
-
-        {/* Price chips */}
-        <View style={s.priceRow}>
-          {[
-            { symbol: "SUI",  price,      change: change24h      },
-            { symbol: "DEEP", price: deepPrice, change: deepChange24h },
-          ].map(({ symbol, price: p, change }) => {
-            const up = change >= 0;
-            return (
-              <View key={symbol} style={[s.priceChip, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-                <Text style={[s.priceSymbol, { color: colors.text }]}>{symbol}</Text>
-                <Text style={[s.priceVal, { color: colors.text }]}>{p < 1 ? `$${p.toFixed(5)}` : `$${p.toFixed(4)}`}</Text>
-                <View style={[s.changePill, { backgroundColor: up ? "rgba(76,175,80,0.14)" : "rgba(212,75,42,0.14)" }]}>
-                  <Ionicons name={up ? "trending-up" : "trending-down"} size={10} color={up ? "#4CAF50" : "#D44B2A"} />
-                  <Text style={[s.changeText, { color: up ? "#4CAF50" : "#D44B2A" }]}>{up ? "+" : ""}{change.toFixed(2)}%</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Recent trades */}
-        <View style={s.section}>
-          <View style={s.sectionHead}>
-            <Text style={[s.sectionTitle, { color: colors.text }]}>Recent trades</Text>
-            <Pressable onPress={onViewActivity} style={s.seeAll}>
-              <Text style={[s.seeAllText, { color: colors.accent }]}>See all</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.accent} />
-            </Pressable>
-          </View>
-
-          {tradeLoading && trades.length === 0 ? (
-            <View style={[s.tradesCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-              <ActivityIndicator color={colors.accent} style={{ padding: 24 }} />
+          {/* Recent trades */}
+          <View style={[s.panel, s.tradesPanel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+            <View style={s.panelHead}>
+              <Text style={[s.panelTitle, { color: colors.text }]}>Recent trades</Text>
+              <Pressable onPress={onViewActivity}>
+                <Text style={[s.viewAll, { color: colors.accent }]}>View all</Text>
+              </Pressable>
             </View>
-          ) : trades.length === 0 ? (
-            <View style={[s.emptyCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-              <Ionicons name="receipt-outline" size={28} color={colors.text3} />
-              <Text style={[s.emptyText, { color: colors.text2 }]}>No trades yet</Text>
-            </View>
-          ) : (
-            <View style={[s.tradesCard, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-              {trades.slice(0, 3).map((tx, i, arr) => (
+            {tradeLoading && recent.length === 0 ? (
+              <View style={{ gap: 10 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} w="100%" h={36} />)}
+              </View>
+            ) : recent.length === 0 ? (
+              <View style={s.emptyState}>
+                <Ionicons name="pulse-outline" size={28} color={colors.text4} />
+                <Text style={[s.emptyText, { color: colors.text3 }]}>No trades yet. Start your first agent to see live activity.</Text>
+              </View>
+            ) : (
+              recent.map((tx, i) => (
                 <Pressable key={tx.id} onPress={() => onViewTx(tx)}
-                  style={[s.tradeRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                  <View style={s.tradeIco}>
-                    <Ionicons name="arrow-down" size={13} color="#4CAF50" />
+                  style={[s.tradeRow, i < recent.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                  <View style={[s.tradeIco, { backgroundColor: colors.bgSoft }]}>
+                    <Ionicons name="arrow-down-left-box" size={14} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.tradePair, { color: colors.text }]}>{tx.pair}</Text>
-                    <Text style={[s.tradeTime, { color: colors.text3 }]}>{tx.time} · DCA</Text>
+                    <Text style={[s.tradeDesc, { color: colors.text }]}>Bought {tx.amount.replace("+", "")}</Text>
+                    <Text style={[s.tradeTime, { color: colors.text3 }]}>{tx.time}</Text>
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={[s.tradeAmt, { color: "#4CAF50" }]}>{tx.amount}</Text>
-                    <Text style={[s.tradeVal, { color: colors.text2 }]}>{tx.value}</Text>
-                  </View>
+                  <Text style={[s.tradeVal, { color: colors.text, fontFamily: "monospace" }]}>{tx.value}</Text>
                 </Pressable>
-              ))}
-            </View>
-          )}
+              ))
+            )}
+          </View>
         </View>
 
         <View style={{ height: 24 }} />
@@ -242,72 +225,56 @@ export function DashboardScreen({
 }
 
 const s = StyleSheet.create({
-  root:    { flex: 1 },
-  scroll:  { padding: 16, gap: 14 },
+  root:   { flex: 1 },
+  scroll: { padding: 16, gap: 14 },
 
-  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
-  greeting:    { fontSize: 12, fontWeight: "500", marginBottom: 1 },
-  totalVal:    { fontSize: 28, fontWeight: "800", letterSpacing: -1 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconBtn:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  header:       { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  pageTitle:    { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
+  pageSub:      { fontSize: 13, marginTop: 2, lineHeight: 18 },
+  newAgentBtn:  { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginTop: 2 },
+  newAgentText: { color: "#fff", fontSize: 13, fontWeight: "600" },
 
-  heroCard:    { borderRadius: 20, borderWidth: 1, padding: 18, gap: 14 },
-  heroTop:     { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  heroLeft:    { flexDirection: "row", alignItems: "center", gap: 8 },
-  agentDot:    { width: 8, height: 8, borderRadius: 4 },
-  agentLabel:  { color: "rgba(245,240,232,0.85)", fontSize: 14, fontWeight: "700" },
-  statusPill:  { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100 },
-  statusText:  { fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  statCard: { width: "48%", flexGrow: 1, borderRadius: 14, borderWidth: 1, padding: 16, gap: 4 },
+  statTop:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  statLabel:{ fontSize: 12, fontWeight: "600" },
+  statValue:{ fontSize: 20, fontWeight: "700", letterSpacing: -0.5 },
+  statDelta:{ fontSize: 12, marginTop: 2, fontFamily: "monospace" },
+  statSub:  { fontSize: 12, marginTop: 4, fontFamily: "monospace" },
 
-  budgetSection: { gap: 6 },
-  budgetRow:     { flexDirection: "row", justifyContent: "space-between" },
-  budgetLabel:   { color: "rgba(245,240,232,0.50)", fontSize: 12 },
-  budgetPct:     { color: "rgba(245,240,232,0.85)", fontSize: 12, fontWeight: "700" },
-  barTrack:      { height: 5, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" },
-  barFill:       { height: "100%", borderRadius: 3 },
-  budgetNums:    { flexDirection: "row", gap: 4 },
-  budgetSpent:   { color: "rgba(245,240,232,0.85)", fontSize: 12, fontWeight: "600" },
-  budgetCap:     { color: "rgba(245,240,232,0.40)", fontSize: 12 },
+  panel:    { borderRadius: 14, borderWidth: 1, padding: 16 },
+  panelHead:{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  panelTitle:{ fontSize: 14, fontWeight: "600" },
 
-  heroStats:  { flexDirection: "row" },
-  heroStat:   { flex: 1, alignItems: "center", paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" },
-  heroStatK:  { color: "rgba(245,240,232,0.45)", fontSize: 10, fontWeight: "600", marginBottom: 3 },
-  heroStatV:  { color: "rgba(245,240,232,0.90)", fontSize: 15, fontWeight: "800" },
+  statusBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 100, borderWidth: 1 },
+  pulseDot:    { width: 6, height: 6, borderRadius: 3 },
+  statusText:  { fontSize: 12, fontWeight: "600" },
 
-  heroBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 12, backgroundColor: "rgba(255,140,0,0.12)", borderWidth: 1, borderColor: "rgba(255,140,0,0.22)" },
-  heroBtnText: { color: "#FF8C00", fontSize: 14, fontWeight: "700" },
+  budgetRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  budgetLabel:{ fontSize: 13 },
+  budgetNum: { fontSize: 13 },
+  barTrack:  { height: 8, borderRadius: 4, overflow: "hidden" },
+  barFill:   { height: "100%", borderRadius: 4 },
 
-  balCard:    { borderRadius: 16, borderWidth: 1, padding: 16 },
-  balTitle:   { fontSize: 12, fontWeight: "600", marginBottom: 10 },
-  balRow:     { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 11 },
-  balDot:     { width: 8, height: 8, borderRadius: 4 },
-  balSymbol:  { fontSize: 14, fontWeight: "700", width: 44 },
-  balAmount:  { flex: 1, fontSize: 13 },
-  balUsd:     { fontSize: 14, fontWeight: "600" },
-  balTotal:   { flexDirection: "row", justifyContent: "space-between", paddingTop: 12, marginTop: 4, borderTopWidth: 1 },
-  balTotalLabel: { fontSize: 13, fontWeight: "600" },
-  balTotalVal:   { fontSize: 16, fontWeight: "800" },
+  twoCol:      { gap: 12 },
+  pricePanel:  {},
+  tradesPanel: {},
 
-  priceRow:    { flexDirection: "row", gap: 10 },
-  priceChip:   { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
-  priceSymbol: { fontSize: 12, fontWeight: "700" },
-  priceVal:    { fontSize: 18, fontWeight: "800", letterSpacing: -0.5 },
-  changePill:  { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 100, alignSelf: "flex-start" },
-  changeText:  { fontSize: 11, fontWeight: "700" },
+  liveTag:  { fontSize: 11, fontFamily: "monospace" },
+  priceRow: { flexDirection: "row", alignItems: "baseline", gap: 12, marginBottom: 10 },
+  bigPrice: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5 },
+  priceDelta:{ fontSize: 14 },
+  priceMetaRow:{ flexDirection: "row", gap: 16 },
+  priceMeta:{ fontSize: 13 },
 
-  section:     { gap: 10 },
-  sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sectionTitle:{ fontSize: 16, fontWeight: "700" },
-  seeAll:      { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAllText:  { fontSize: 13, fontWeight: "600" },
+  viewAll: { fontSize: 13, fontWeight: "500" },
 
-  tradesCard:  { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  emptyCard:   { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: "center", gap: 10 },
-  emptyText:   { fontSize: 14 },
-  tradeRow:    { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
-  tradeIco:    { width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(76,175,80,0.12)", alignItems: "center", justifyContent: "center" },
-  tradePair:   { fontSize: 14, fontWeight: "600" },
-  tradeTime:   { fontSize: 11, marginTop: 2 },
-  tradeAmt:    { fontSize: 14, fontWeight: "700" },
-  tradeVal:    { fontSize: 11, marginTop: 2 },
+  emptyState:{ paddingVertical: 24, alignItems: "center", gap: 10 },
+  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 19 },
+
+  tradeRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
+  tradeIco: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  tradeDesc:{ fontSize: 13, fontWeight: "500" },
+  tradeTime:{ fontSize: 12, marginTop: 1 },
+  tradeVal: { fontSize: 13 },
 });

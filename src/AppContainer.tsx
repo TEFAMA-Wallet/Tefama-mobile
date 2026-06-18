@@ -1,30 +1,30 @@
-import { useState } from "react";
-import { View, StyleSheet } from "react-native";
-import { BottomNav }         from "./components/BottomNav";
-import { TxDetailModal }     from "./screens/TxDetailModal";
-import { SplashScreen }      from "./screens/SplashScreen";
-import { OnboardingScreen }  from "./screens/OnboardingScreen";
-import { ConnectScreen }     from "./screens/ConnectScreen";
-import { DashboardScreen }   from "./screens/DashboardScreen";
-import { AgentsScreen }      from "./screens/AgentsScreen";
-import { ActivityScreen }    from "./screens/ActivityScreen";
-import { SettingsScreen }    from "./screens/SettingsScreen";
-import { AgentDetailsScreen }from "./screens/AgentDetailsScreen";
-import { CreateAgentScreen } from "./screens/CreateAgentScreen";
-import { TemplatesScreen }   from "./screens/TemplatesScreen";
-import { AgentCreatedScreen }from "./screens/AgentCreatedScreen";
-import { useAuth }           from "./lib/AuthContext";
+import { useEffect, useState } from "react";
+import { View, StyleSheet }    from "react-native";
+import { BottomNav }            from "./components/BottomNav";
+import { TxDetailModal }        from "./screens/TxDetailModal";
+import { SplashScreen }         from "./screens/SplashScreen";
+import { ConnectScreen }        from "./screens/ConnectScreen";
+import { DashboardScreen }      from "./screens/DashboardScreen";
+import { WalletScreen }         from "./screens/WalletScreen";
+import { ActivityScreen }       from "./screens/ActivityScreen";
+import { AnalyticsScreen }      from "./screens/AnalyticsScreen";
+import { SettingsScreen }       from "./screens/SettingsScreen";
+import { AgentDetailsScreen }   from "./screens/AgentDetailsScreen";
+import { CreateAgentScreen }    from "./screens/CreateAgentScreen";
+import { TemplatesScreen }      from "./screens/TemplatesScreen";
+import { AgentCreatedScreen }   from "./screens/AgentCreatedScreen";
+import type { Tx, Agent }       from "./lib/data";
+import type { NavTab }          from "./components/BottomNav";
+import { useAuth }              from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
-import { VAULT_ID }          from "./lib/constants";
-import type { Agent, Tx }    from "./lib/data";
-import type { NavTab }       from "./components/BottomNav";
+import { VAULT_ID }             from "./lib/constants";
 
 type Screen =
-  | "splash" | "onboarding" | "connect"
-  | "home" | "agents" | "activity" | "settings"
+  | "splash" | "connect"
+  | "home" | "wallet" | "activity" | "analytics" | "settings"
   | "agent-detail" | "create" | "templates" | "created";
 
-const TAB_SCREENS: NavTab[] = ["home", "agents", "activity", "settings"];
+const TAB_SCREENS: NavTab[] = ["home", "wallet", "activity", "analytics", "settings"];
 
 function tradeToTx(t: Trade): Tx {
   return {
@@ -32,9 +32,9 @@ function tradeToTx(t: Trade): Tx {
     time:   t.time,
     type:   "Buy",
     pair:   "DEEP / SUI",
-    amount: `+${t.baseReceived.toFixed(3)} DEEP`,
+    amount: `+${t.baseReceived.toFixed(4)} DEEP`,
     value:  `${t.quoteSpent.toFixed(4)} SUI`,
-    price:  t.price.toFixed(6),
+    price:  t.price.toFixed(8),
     status: t.status,
     gas:    "—",
     hash:   t.digest,
@@ -47,43 +47,20 @@ export function AppContainer() {
 
   const [screen,    setScreen]    = useState<Screen>("splash");
   const [tab,       setTab]       = useState<NavTab>("home");
-  const [selAgent,  setSelAgent]  = useState<Agent | null>(null);
   const [selTx,     setSelTx]     = useState<Tx | null>(null);
-  const [splashDone, setSplashDone] = useState(false);
+  const [splashDone,setSplashDone]= useState(false);
 
-  // Global data hooks — available to all screens
+  // All data hooks — active even before login (price is public)
   const priceData  = usePrice();
   const walletData = useWallet(session?.address ?? null);
   const tradeData  = useTrades(VAULT_ID, priceData.deepPrice);
 
-  const isTabScreen = (TAB_SCREENS as string[]).includes(screen);
+  const liveTxs = tradeData.trades.map(tradeToTx);
 
-  function go(s: Screen) {
-    setScreen(s);
-    if ((TAB_SCREENS as string[]).includes(s)) setTab(s as NavTab);
-  }
-
-  function handleNavChange(key: NavTab | "create") {
-    if (key === "create") { setScreen("templates"); return; }
-    setTab(key);
-    setScreen(key);
-  }
-
-  function handleSplashDone() {
-    setSplashDone(true);
-    if (authLoading) { setScreen("splash"); return; } // wait a tick
-    if (session) { setScreen("home"); } else { setScreen("onboarding"); }
-  }
-
-  // Once auth resolves after splash, navigate
-  if (splashDone && screen === "splash" && !authLoading) {
-    setScreen(session ? "home" : "onboarding");
-  }
-
-  // Build a synthetic "Agent" from live vault data for screens that need it
+  // Build agent from live vault
   const vault = walletData.vault;
   const liveAgent: Agent = {
-    id:          "vault_0",
+    id:          VAULT_ID,
     name:        "DCA Agent",
     strategy:    "DCA",
     status:      vault?.paused ? "paused" : "active",
@@ -99,7 +76,52 @@ export function AppContainer() {
     created:     "Jun 2026",
   };
 
-  const liveTxs = tradeData.trades.map(tradeToTx);
+  function handleSplashDone() {
+    setSplashDone(true);
+    if (!authLoading) {
+      setScreen(session ? "home" : "connect");
+    }
+  }
+
+  useEffect(() => {
+    if (splashDone && screen === "splash" && !authLoading) {
+      setScreen(session ? "home" : "connect");
+    }
+  }, [authLoading, session, splashDone, screen]);
+
+  const isTabScreen = (TAB_SCREENS as string[]).includes(screen);
+
+  function go(s: Screen) {
+    setScreen(s);
+    if ((TAB_SCREENS as string[]).includes(s)) setTab(s as NavTab);
+  }
+
+  function handleTabChange(key: NavTab) {
+    setTab(key);
+    setScreen(key);
+  }
+
+  const commonDashProps = {
+    price:         priceData.price,
+    deepPrice:     priceData.deepPrice,
+    change24h:     priceData.change24h,
+    deepChange24h: priceData.deepChange24h,
+    priceLoading:  priceData.loading,
+    suiBalance:    walletData.suiBalance,
+    usdcBalance:   walletData.usdcBalance,
+    deepBalance:   walletData.deepBalance,
+    vault:         walletData.vault,
+    walletLoading: walletData.loading,
+    trades:        liveTxs,
+    tradeCount:    tradeData.count,
+    tradePnl:      tradeData.pnl,
+    tradeRoi:      tradeData.roi,
+    tradeLoading:  tradeData.loading,
+    liveAgent,
+    onViewAgent:    () => go("agent-detail"),
+    onViewActivity: () => go("activity"),
+    onViewTx:       setSelTx,
+  };
 
   let content: React.ReactNode;
 
@@ -107,110 +129,119 @@ export function AppContainer() {
     case "splash":
       content = <SplashScreen onDone={handleSplashDone} />;
       break;
-    case "onboarding":
-      content = <OnboardingScreen onDone={() => go("connect")} />;
-      break;
+
     case "connect":
-      content = <ConnectScreen onConnected={() => go("home")} />;
+      content = <ConnectScreen onConnected={() => { setScreen("home"); setTab("home"); }} />;
       break;
+
     case "home":
-      content = <DashboardScreen
-        price={priceData.price}
-        deepPrice={priceData.deepPrice}
-        change24h={priceData.change24h}
-        deepChange24h={priceData.deepChange24h}
-        priceLoading={priceData.loading}
-        suiBalance={walletData.suiBalance}
-        usdcBalance={walletData.usdcBalance}
-        deepBalance={walletData.deepBalance}
-        vault={walletData.vault}
-        walletLoading={walletData.loading}
-        trades={liveTxs}
-        tradeCount={tradeData.count}
-        tradePnl={tradeData.pnl}
-        tradeLoading={tradeData.loading}
-        liveAgent={liveAgent}
-        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onViewActivity={() => go("activity")}
-        onViewTx={setSelTx}
-      />;
+      content = <DashboardScreen {...commonDashProps} />;
       break;
-    case "agents":
-      content = <AgentsScreen
-        liveAgent={liveAgent}
-        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onCreateAgent={() => go("templates")}
-      />;
+
+    case "wallet":
+      content = (
+        <WalletScreen
+          price={priceData.price}
+          deepPrice={priceData.deepPrice}
+          suiBalance={walletData.suiBalance}
+          usdcBalance={walletData.usdcBalance}
+          deepBalance={walletData.deepBalance}
+          vault={walletData.vault}
+          walletLoading={walletData.loading}
+          priceLoading={priceData.loading}
+        />
+      );
       break;
+
     case "activity":
-      content = <ActivityScreen
-        trades={liveTxs}
-        loading={tradeData.loading}
-        onViewTx={setSelTx}
-      />;
+      content = (
+        <ActivityScreen
+          trades={liveTxs}
+          pnl={tradeData.pnl}
+          count={tradeData.count}
+          loading={tradeData.loading}
+          onRefresh={tradeData.refresh}
+          onViewTx={setSelTx}
+          deepPrice={priceData.deepPrice}
+        />
+      );
       break;
+
+    case "analytics":
+      content = (
+        <AnalyticsScreen
+          price={priceData.price}
+          deepPrice={priceData.deepPrice}
+          change24h={priceData.change24h}
+          deepChange24h={priceData.deepChange24h}
+          high24h={priceData.high24h}
+          low24h={priceData.low24h}
+          volume24h={priceData.volume24h}
+          suiBalance={walletData.suiBalance}
+          usdcBalance={walletData.usdcBalance}
+          deepBalance={walletData.deepBalance}
+          vault={walletData.vault}
+          trades={liveTxs}
+          pnl={tradeData.pnl}
+          roi={tradeData.roi}
+          count={tradeData.count}
+          loading={priceData.loading || walletData.loading || tradeData.loading}
+        />
+      );
+      break;
+
     case "settings":
-      content = <SettingsScreen />;
+      content = <SettingsScreen vault={walletData.vault} />;
       break;
+
     case "agent-detail":
-      content = <AgentDetailsScreen
-        agent={selAgent ?? liveAgent}
-        trades={liveTxs}
-        onBack={() => go("agents")}
-        onRevoke={() => go("home")}
-        onViewActivity={() => go("activity")}
-        onViewTx={setSelTx}
-      />;
+      content = (
+        <AgentDetailsScreen
+          agent={liveAgent}
+          trades={liveTxs}
+          onBack={() => go("home")}
+          onRevoke={() => go("home")}
+          onViewActivity={() => go("activity")}
+          onViewTx={setSelTx}
+        />
+      );
       break;
+
     case "templates":
-      content = <TemplatesScreen
-        onBack={() => go(tab)}
-        onSelect={() => go("create")}
-      />;
+      content = (
+        <TemplatesScreen
+          onBack={() => go(tab)}
+          onSelect={() => go("create")}
+        />
+      );
       break;
+
     case "create":
-      content = <CreateAgentScreen
-        onBack={() => go("templates")}
-        onDone={() => go("created")}
-      />;
+      content = (
+        <CreateAgentScreen
+          onBack={() => go("templates")}
+          onDone={() => go("created")}
+        />
+      );
       break;
+
     case "created":
-      content = <AgentCreatedScreen
-        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onHome={() => go("home")}
-      />;
+      content = (
+        <AgentCreatedScreen
+          onViewAgent={() => go("agent-detail")}
+          onHome={() => go("home")}
+        />
+      );
       break;
+
     default:
-      content = <DashboardScreen
-        price={priceData.price}
-        deepPrice={priceData.deepPrice}
-        change24h={priceData.change24h}
-        deepChange24h={priceData.deepChange24h}
-        priceLoading={priceData.loading}
-        suiBalance={walletData.suiBalance}
-        usdcBalance={walletData.usdcBalance}
-        deepBalance={walletData.deepBalance}
-        vault={walletData.vault}
-        walletLoading={walletData.loading}
-        trades={liveTxs}
-        tradeCount={tradeData.count}
-        tradePnl={tradeData.pnl}
-        tradeLoading={tradeData.loading}
-        liveAgent={liveAgent}
-        onViewAgent={() => { setSelAgent(liveAgent); go("agent-detail"); }}
-        onViewActivity={() => go("activity")}
-        onViewTx={setSelTx}
-      />;
+      content = <DashboardScreen {...commonDashProps} />;
   }
 
   return (
     <View style={s.root}>
       <View style={s.content}>{content}</View>
-
-      {isTabScreen && (
-        <BottomNav value={tab} onChange={handleNavChange} />
-      )}
-
+      {isTabScreen && <BottomNav value={tab} onChange={handleTabChange} />}
       <TxDetailModal tx={selTx} onClose={() => setSelTx(null)} />
     </View>
   );

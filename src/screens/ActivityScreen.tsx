@@ -1,120 +1,116 @@
-import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Badge } from "../components/Badge";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import type { Tx } from "../lib/data";
 
-type Filter = "All" | "Confirmed" | "Pending" | "Failed";
-const FILTERS: Filter[] = ["All", "Confirmed", "Pending", "Failed"];
-
 interface Props {
   trades:   Tx[];
+  pnl:      number;
+  count:    number;
   loading:  boolean;
+  onRefresh:() => void;
   onViewTx: (tx: Tx) => void;
+  deepPrice:number;
 }
 
-const STATUS_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
-  confirmed: "checkmark-circle",
-  pending:   "time",
-  failed:    "close-circle",
-};
-const STATUS_COLOR: Record<string, string> = {
-  confirmed: "#4CAF50",
-  pending:   "#FFB300",
-  failed:    "#D44B2A",
-};
+function Skeleton({ w = 80, h = 14 }: { w?: number | string; h?: number }) {
+  const { isDark } = useColorTheme();
+  const { colors } = getTheme(isDark);
+  return <View style={{ width: w as any, height: h, borderRadius: 4, backgroundColor: colors.bgSoft3 }} />;
+}
 
-export function ActivityScreen({ trades, loading, onViewTx }: Props) {
-  const [filter, setFilter] = useState<Filter>("All");
+function usd(n: number, d = 2) {
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewTx, deepPrice }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
-  const rows = trades.filter(t =>
-    filter === "All" || t.status === filter.toLowerCase()
-  );
+  const totalSuiSpent   = trades.reduce((s, t) => s + Number(t.value.replace(" SUI", "")), 0);
+  const totalDeepAcc    = trades.reduce((s, t) => s + Number(t.amount.replace("+", "").replace(" DEEP", "")), 0);
 
-  const confirmed = trades.filter(t => t.status === "confirmed").length;
-  const failed    = trades.filter(t => t.status === "failed").length;
+  const SUMMARY = [
+    { label: "Total trades",     val: loading ? null : String(count) },
+    { label: "SUI spent",        val: loading ? null : totalSuiSpent > 0 ? `${totalSuiSpent.toFixed(4)} SUI` : "—" },
+    { label: "DEEP accumulated", val: loading ? null : totalDeepAcc > 0 ? `${totalDeepAcc.toFixed(4)} DEEP` : "—" },
+    { label: "Unrealised P&L",   val: loading ? null : `${pnl >= 0 ? "+" : ""}${usd(pnl, 4)}`, color: pnl >= 0 ? colors.accent : colors.red },
+  ];
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-
-      {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
         <View>
-          <Text style={[s.headerTitle, { color: colors.text }]}>Activity</Text>
-          {trades.length > 0 && (
-            <Text style={[s.headerSub, { color: colors.text2 }]}>
-              {confirmed} confirmed · {failed > 0 ? `${failed} failed` : "all clean"}
-            </Text>
+          <Text style={[s.pageTitle, { color: colors.text }]}>Activity log</Text>
+          <Text style={[s.pageSub, { color: colors.text2 }]}>All on-chain executions · Sui testnet</Text>
+        </View>
+        <Pressable
+          onPress={onRefresh}
+          style={[s.refreshBtn, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}
+        >
+          <Ionicons name="refresh-outline" size={14} color={colors.text2} />
+          <Text style={[s.refreshText, { color: colors.text2 }]}>Refresh</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.accent} />}
+      >
+        {/* Summary strip */}
+        <View style={s.summaryGrid}>
+          {SUMMARY.map(({ label, val, color }) => (
+            <View key={label} style={[s.summaryCard, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}>
+              <Text style={[s.summaryLabel, { color: colors.text3 }]}>{label}</Text>
+              {val === null
+                ? <Skeleton w={80} h={20} />
+                : <Text style={[s.summaryVal, { color: color ?? colors.text, fontFamily: "monospace" }]}>{val}</Text>
+              }
+            </View>
+          ))}
+        </View>
+
+        {/* Trades list */}
+        <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          {/* Table header */}
+          <View style={[s.thead, { borderBottomColor: colors.border }]}>
+            {["Type", "Asset", "Received", "Spent", "Price", "Time"].map(h => (
+              <Text key={h} style={[s.th, { color: colors.text3, flex: h === "Time" ? 1.2 : 1 }]}>{h}</Text>
+            ))}
+          </View>
+
+          {loading && trades.length === 0 ? (
+            [1, 2, 3, 4, 5].map(i => (
+              <View key={i} style={[s.trow, { borderBottomColor: colors.border }]}>
+                {[50, 40, 80, 70, 60, 60].map((w, j) => <Skeleton key={j} w={w} h={14} />)}
+              </View>
+            ))
+          ) : trades.length === 0 ? (
+            <View style={s.empty}>
+              <Ionicons name="pulse-outline" size={32} color={colors.text4} />
+              <Text style={[s.emptyTitle, { color: colors.text2 }]}>No on-chain trades found yet.</Text>
+              <Text style={[s.emptySub, { color: colors.text3 }]}>Run the agent to see live execution data here.</Text>
+            </View>
+          ) : (
+            trades.map((tx, i) => (
+              <Pressable key={tx.id} onPress={() => onViewTx(tx)}
+                style={[s.trow, i < trades.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                <View style={[s.buyTag, { backgroundColor: colors.accentDim }]}>
+                  <Ionicons name="arrow-down-left-box" size={10} color={colors.accent} />
+                  <Text style={[s.buyText, { color: colors.accent }]}>buy</Text>
+                </View>
+                <Text style={[s.tdAccent, { color: colors.accent, flex: 1, fontFamily: "monospace", fontWeight: "600" }]}>DEEP</Text>
+                <Text style={[s.td, { color: colors.text, flex: 1, fontFamily: "monospace" }]}>{tx.amount.replace("+", "")}</Text>
+                <Text style={[s.td, { color: colors.text, flex: 1, fontFamily: "monospace" }]}>{tx.value}</Text>
+                <Text style={[s.td, { color: colors.text2, flex: 1, fontFamily: "monospace" }]}>{usd(Number(tx.price), 6)}</Text>
+                <Text style={[s.tdTime, { color: colors.text3, flex: 1.2 }]}>{tx.time}</Text>
+              </Pressable>
+            ))
           )}
         </View>
-        {loading && <ActivityIndicator size="small" color={colors.accent} />}
-      </View>
 
-      {/* Filter tabs */}
-      <View style={[s.filterBar, { backgroundColor: colors.bg3 }]}>
-        {FILTERS.map((f) => {
-          const on = f === filter;
-          return (
-            <Pressable key={f} onPress={() => setFilter(f)}
-              style={[s.filterBtn, on && { backgroundColor: colors.bg2 }]}>
-              <Text style={[s.filterText, { color: on ? colors.text : colors.text3 }]}>{f}</Text>
-              {f !== "All" && (
-                <View style={[s.filterDot, { backgroundColor: f === "Confirmed" ? "#4CAF50" : f === "Pending" ? "#FFB300" : "#D44B2A" }]} />
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {loading && rows.length === 0 ? (
-          <View style={s.emptyWrap}>
-            <ActivityIndicator size="large" color={colors.accent} />
-            <Text style={[s.emptyText, { color: colors.text2 }]}>Loading trades…</Text>
-          </View>
-        ) : rows.length === 0 ? (
-          <View style={s.emptyWrap}>
-            <View style={[s.emptyIco, { backgroundColor: colors.accentDim }]}>
-              <Ionicons name="receipt-outline" size={32} color={colors.accent} />
-            </View>
-            <Text style={[s.emptyTitle, { color: colors.text }]}>No {filter === "All" ? "" : filter.toLowerCase()} trades yet</Text>
-            <Text style={[s.emptyText, { color: colors.text2 }]}>Your agent's on-chain executions appear here.</Text>
-          </View>
-        ) : (
-          <View style={[s.list, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-            {rows.map((tx, i) => {
-              const statusColor = STATUS_COLOR[tx.status] ?? colors.text2;
-              return (
-                <Pressable key={tx.id} onPress={() => onViewTx(tx)}
-                  style={[s.row, i < rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                  {/* Left icon */}
-                  <View style={[s.rowIco, { backgroundColor: "rgba(76,175,80,0.10)" }]}>
-                    <Ionicons name="arrow-down" size={15} color="#4CAF50" />
-                  </View>
-
-                  {/* Middle */}
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.rowPair, { color: colors.text }]}>{tx.pair}</Text>
-                    <View style={s.rowMeta}>
-                      <Ionicons name={STATUS_ICON[tx.status]} size={11} color={statusColor} />
-                      <Text style={[s.rowTime, { color: colors.text3 }]}>{tx.time}</Text>
-                    </View>
-                  </View>
-
-                  {/* Right */}
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={[s.rowAmt, { color: "#4CAF50" }]}>{tx.amount}</Text>
-                    <Text style={[s.rowVal, { color: colors.text2 }]}>{tx.value}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
         <View style={{ height: 24 }} />
       </ScrollView>
     </View>
@@ -123,28 +119,30 @@ export function ActivityScreen({ trades, loading, onViewTx }: Props) {
 
 const s = StyleSheet.create({
   root:   { flex: 1 },
-  scroll: { padding: 16 },
+  scroll: { padding: 16, gap: 14 },
 
-  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
-  headerTitle: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
-  headerSub:   { fontSize: 12, fontWeight: "500", marginTop: 2 },
+  header:      { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  pageTitle:   { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
+  pageSub:     { fontSize: 13, marginTop: 2 },
+  refreshBtn:  { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, marginTop: 2 },
+  refreshText: { fontSize: 12, fontWeight: "500" },
 
-  filterBar:  { flexDirection: "row", marginHorizontal: 16, borderRadius: 12, padding: 3, gap: 2, marginBottom: 6 },
-  filterBtn:  { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 8, borderRadius: 10 },
-  filterText: { fontSize: 12, fontWeight: "600" },
-  filterDot:  { width: 6, height: 6, borderRadius: 3 },
+  summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  summaryCard: { width: "48%", flexGrow: 1, borderRadius: 12, borderWidth: 1, padding: 14 },
+  summaryLabel:{ fontSize: 11, fontWeight: "700", letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 6 },
+  summaryVal:  { fontSize: 17, fontWeight: "700" },
 
-  emptyWrap:  { alignItems: "center", paddingVertical: 56, gap: 12 },
-  emptyIco:   { width: 68, height: 68, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 16, fontWeight: "700" },
-  emptyText:  { fontSize: 14, textAlign: "center", lineHeight: 20, paddingHorizontal: 24 },
+  panel:  { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  thead:  { flexDirection: "row", padding: 12, borderBottomWidth: 1, gap: 4 },
+  th:     { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  trow:   { flexDirection: "row", alignItems: "center", padding: 12, gap: 4 },
+  buyTag: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 100 },
+  buyText:{ fontSize: 10, fontWeight: "700" },
+  tdAccent:{ fontSize: 12 },
+  td:     { fontSize: 12 },
+  tdTime: { fontSize: 11 },
 
-  list:   { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  row:    { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
-  rowIco: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  rowPair:{ fontSize: 14, fontWeight: "600" },
-  rowMeta:{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
-  rowTime:{ fontSize: 11 },
-  rowAmt: { fontSize: 14, fontWeight: "700" },
-  rowVal: { fontSize: 11, marginTop: 2 },
+  empty:      { paddingVertical: 48, alignItems: "center", gap: 10 },
+  emptyTitle: { fontSize: 15, fontWeight: "600", textAlign: "center" },
+  emptySub:   { fontSize: 13, textAlign: "center", lineHeight: 19 },
 });
