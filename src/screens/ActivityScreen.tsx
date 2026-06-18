@@ -77,19 +77,20 @@ export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewT
           ))}
         </View>
 
-        {/* Trades list */}
+        {/* Trades list — card style */}
         <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-          {/* Table header */}
-          <View style={[s.thead, { borderBottomColor: colors.border }]}>
-            {["Type", "Asset", "Received", "Spent", "Price", "Time"].map(h => (
-              <Text key={h} style={[s.th, { color: colors.text3, flex: h === "Time" ? 1.2 : 1 }]}>{h}</Text>
-            ))}
-          </View>
-
           {loading && trades.length === 0 ? (
             [1, 2, 3, 4, 5].map(i => (
-              <View key={i} style={[s.trow, { borderBottomColor: colors.border }]}>
-                {[50, 40, 80, 70, 60, 60].map((w, j) => <Skeleton key={j} w={w} h={14} />)}
+              <View key={i} style={[s.trow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                <Skeleton w={32} h={32} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton w={140} h={14} />
+                  <Skeleton w={80} h={11} />
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 6 }}>
+                  <Skeleton w={70} h={14} />
+                  <Skeleton w={90} h={11} />
+                </View>
               </View>
             ))
           ) : trades.length === 0 ? (
@@ -99,20 +100,25 @@ export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewT
               <Text style={[s.emptySub, { color: colors.text3 }]}>Run the agent to see live execution data here.</Text>
             </View>
           ) : (
-            trades.map((tx, i) => (
-              <Pressable key={tx.id} onPress={() => onViewTx(tx)}
-                style={[s.trow, i < trades.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                <View style={[s.buyTag, { backgroundColor: colors.accentDim }]}>
-                  <Ionicons name="arrow-down-left-box" size={10} color={colors.accent} />
-                  <Text style={[s.buyText, { color: colors.accent }]}>buy</Text>
-                </View>
-                <Text style={[s.tdAccent, { color: colors.accent, flex: 1, fontFamily: "monospace", fontWeight: "600" }]}>DEEP</Text>
-                <Text style={[s.td, { color: colors.text, flex: 1, fontFamily: "monospace" }]}>{tx.amount.replace("+", "")}</Text>
-                <Text style={[s.td, { color: colors.text, flex: 1, fontFamily: "monospace" }]}>{tx.value}</Text>
-                <Text style={[s.td, { color: colors.text2, flex: 1, fontFamily: "monospace" }]}>{usd(Number(tx.price), 6)}</Text>
-                <Text style={[s.tdTime, { color: colors.text3, flex: 1.2 }]}>{tx.time}</Text>
-              </Pressable>
-            ))
+            trades.map((tx, i) => {
+              const deepAmt = tx.amount.replace("+", "").replace(" DEEP", "");
+              return (
+                <Pressable key={tx.id} onPress={() => onViewTx(tx)}
+                  style={[s.trow, i < trades.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                  <View style={[s.buyIco, { backgroundColor: colors.accentDim }]}>
+                    <Ionicons name="arrow-down-left-box" size={16} color={colors.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.cardTitle, { color: colors.text }]}>Bought {deepAmt} DEEP</Text>
+                    <Text style={[s.cardTime, { color: colors.text3 }]}>{tx.time}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={[s.cardVal, { color: colors.text, fontFamily: "monospace" }]}>{tx.value}</Text>
+                    <Text style={[s.cardPrice, { color: colors.text2, fontFamily: "monospace" }]}>{usd(Number(tx.price), 6)} / DEEP</Text>
+                  </View>
+                </Pressable>
+              );
+            })
           )}
         </View>
 
@@ -137,15 +143,13 @@ const s = StyleSheet.create({
   summaryLabel:{ fontSize: 11, fontWeight: "700", letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 6 },
   summaryVal:  { fontSize: 17, fontWeight: "700" },
 
-  panel:  { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
-  thead:  { flexDirection: "row", padding: 12, borderBottomWidth: 1, gap: 4 },
-  th:     { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  trow:   { flexDirection: "row", alignItems: "center", padding: 12, gap: 4 },
-  buyTag: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 100 },
-  buyText:{ fontSize: 10, fontWeight: "700" },
-  tdAccent:{ fontSize: 12 },
-  td:     { fontSize: 12 },
-  tdTime: { fontSize: 11 },
+  panel:     { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  trow:      { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, gap: 12 },
+  buyIco:    { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  cardTitle: { fontSize: 13, fontWeight: "600", marginBottom: 2 },
+  cardTime:  { fontSize: 11 },
+  cardVal:   { fontSize: 13, fontWeight: "600", marginBottom: 2 },
+  cardPrice: { fontSize: 11 },
 
   empty:      { paddingVertical: 48, alignItems: "center", gap: 10 },
   emptyTitle: { fontSize: 15, fontWeight: "600", textAlign: "center" },

@@ -62,7 +62,7 @@ export function AgentDetailsScreen({ agent, trades, onBack, onRevoke, onViewActi
             <CircularProgress
               value={agent.spent}
               max={agent.budget || 1}
-              size={168}
+              size={148}
               stroke={13}
               valueText={`${agent.spent.toFixed(3)}`}
               caption={`of ${agent.budget.toFixed(2)} SUI`}
@@ -171,7 +171,7 @@ const s = StyleSheet.create({
   ringStats:   { flex: 1, gap: 0 },
   ringStat:    { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.06)" },
   ringStatK:   { color: "rgba(245,240,232,0.40)", fontSize: 11, fontWeight: "600", marginBottom: 3 },
-  ringStatV:   { color: "rgba(245,240,232,0.85)", fontSize: 17, fontWeight: "800" },
+  ringStatV:   { color: "rgba(245,240,232,0.85)", fontSize: 15, fontWeight: "800" },
 
   infoCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   infoRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13 },

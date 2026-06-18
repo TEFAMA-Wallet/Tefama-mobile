@@ -155,7 +155,7 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
             ].map(({ label, val, accent }) => (
               <View key={label} style={[s.perfCell, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}>
                 <Text style={[s.perfLabel, { color: colors.text3 }]}>{label}</Text>
-                <Text style={[s.perfVal, { color: accent ? colors.accent : colors.text }]}>{val}</Text>
+                <Text style={[s.perfVal, { color: accent ? colors.accent : colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{val}</Text>
               </View>
             ))}
           </View>
@@ -217,5 +217,5 @@ const s = StyleSheet.create({
   perfGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
   perfCell:  { width: "31%", flexGrow: 1, borderRadius: 10, borderWidth: 1, padding: 10, gap: 4 },
   perfLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5 },
-  perfVal:   { fontSize: 14, fontWeight: "700" },
+  perfVal:   { fontSize: 12, fontWeight: "700" },
 });

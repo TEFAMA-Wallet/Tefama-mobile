@@ -88,8 +88,8 @@ export function DashboardScreen({
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <View>
           <Text style={[s.pageTitle, { color: colors.text }]}>Dashboard</Text>
-          <Text style={[s.pageSub, { color: colors.text2 }]}>
-            {firstName ? `Welcome back, ${firstName}` : "Welcome back"} · live data from Sui testnet
+          <Text style={[s.pageSub, { color: colors.text2 }]} numberOfLines={1}>
+            {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
           </Text>
         </View>
         <View style={s.headerRight}>
