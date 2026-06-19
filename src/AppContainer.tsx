@@ -110,10 +110,15 @@ export function AppContainer() {
   }
 
   useEffect(() => {
-    if (splashDone && screen === "splash" && !authLoading) {
-      setScreen(session ? "home" : "connect");
+    if (!splashDone || authLoading) return;
+    if (!session) {
+      // Logged out from any screen → go to connect
+      setScreen("connect");
+      setTab("home");
+    } else if (screen === "splash") {
+      setScreen("home");
     }
-  }, [authLoading, session, splashDone, screen]);
+  }, [authLoading, session, splashDone]);
 
   const isTabScreen = (TAB_SCREENS as string[]).includes(screen);
 
