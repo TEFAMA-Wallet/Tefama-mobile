@@ -55,7 +55,7 @@ function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) 
 }
 
 export function SettingsScreen({ vault }: Props) {
-  const { isDark } = useColorTheme();
+  const { isDark, toggle } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
   // Note: notification and security toggles are UI-only for now
@@ -120,6 +120,22 @@ export function SettingsScreen({ vault }: Props) {
             <Text style={[s.explorerText, { color: colors.accent }]}>View on Explorer</Text>
             <Ionicons name="open-outline" size={13} color={colors.accent} />
           </Pressable>
+        </View>
+
+        {/* Appearance */}
+        <View style={[s.section, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <SectionHead icon={<Ionicons name="color-palette-outline" size={18} color={colors.accent} />} title="Appearance" />
+          <SettingRow
+            label={isDark ? "Dark mode" : "Light mode"}
+            desc={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            right={
+              <Pressable onPress={toggle}>
+                <View style={[tog.track, { backgroundColor: isDark ? colors.accent : colors.bg5 }]}>
+                  <View style={[tog.thumb, { left: isDark ? 22 : 3 }]} />
+                </View>
+              </Pressable>
+            }
+          />
         </View>
 
         {/* Notifications */}
