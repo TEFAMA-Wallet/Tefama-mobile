@@ -21,6 +21,7 @@ import type { NavTab }                       from "./components/BottomNav";
 import { useAuth }                           from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
 import { useNotifications }                  from "./lib/useNotifications";
+import { useNotifPrefs }                     from "./lib/useNotifPrefs";
 
 type Screen =
   | "splash" | "connect"
@@ -78,8 +79,11 @@ export function AppContainer() {
 
   const liveTxs = tradeData.trades.map(tradeToTx);
 
-  // Notifications — watches live trades + vault for events
-  const notifState = useNotifications(liveTxs, walletData.vault);
+  // Notification preferences — persisted, controls which events fire
+  const { prefs: notifPrefs, toggle: toggleNotifPref } = useNotifPrefs();
+
+  // Notifications — watches live trades + vault for events, gated by prefs
+  const notifState = useNotifications(liveTxs, walletData.vault, notifPrefs);
 
   // Build live agent from vault data
   const vault = walletData.vault;
@@ -260,7 +264,13 @@ export function AppContainer() {
       break;
 
     case "settings":
-      content = <SettingsScreen vault={walletData.vault} />;
+      content = (
+        <SettingsScreen
+          vault={walletData.vault}
+          notifPrefs={notifPrefs}
+          onToggleNotif={toggleNotifPref}
+        />
+      );
       break;
 
     case "agent-detail":

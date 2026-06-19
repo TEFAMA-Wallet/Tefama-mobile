@@ -4,9 +4,14 @@ import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import { useAuth } from "../lib/AuthContext";
 import type { Vault } from "../lib/useOnchain";
+import type { NotifPrefs } from "../lib/useNotifPrefs";
 import { useState } from "react";
 
-interface Props { vault: Vault | null }
+interface Props {
+  vault:          Vault | null;
+  notifPrefs:     NotifPrefs;
+  onToggleNotif:  (key: keyof NotifPrefs) => void;
+}
 
 function Toggle({ on }: { on: boolean }) {
   const { isDark } = useColorTheme();
@@ -54,12 +59,10 @@ function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) 
   );
 }
 
-export function SettingsScreen({ vault }: Props) {
+export function SettingsScreen({ vault, notifPrefs, onToggleNotif }: Props) {
   const { isDark, toggle } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
-  // Note: notification and security toggles are UI-only for now
-  const [notifs, setNotifs] = useState({ budget: true, trade: true, weekly: false });
   const [security, setSecurity] = useState({ biometric: true, lock: false });
 
   const name  = session?.name    ?? "—";
@@ -143,18 +146,18 @@ export function SettingsScreen({ vault }: Props) {
           <SectionHead icon={<Ionicons name="notifications-outline" size={18} color={colors.accent} />} title="Notifications" />
           <SettingRow
             label="Budget warning"
-            desc="Alert when vault budget reaches 80%"
-            right={<Pressable onPress={() => setNotifs(n => ({ ...n, budget: !n.budget }))}><Toggle on={notifs.budget} /></Pressable>}
+            desc="Alert when vault budget reaches 80% or 100%"
+            right={<Pressable onPress={() => onToggleNotif("budget")}><Toggle on={notifPrefs.budget} /></Pressable>}
           />
           <SettingRow
             label="Trade execution"
-            desc="Notify on each on-chain trade"
-            right={<Pressable onPress={() => setNotifs(n => ({ ...n, trade: !n.trade }))}><Toggle on={notifs.trade} /></Pressable>}
+            desc="Notify on each on-chain trade from DeepBook"
+            right={<Pressable onPress={() => onToggleNotif("trade")}><Toggle on={notifPrefs.trade} /></Pressable>}
           />
           <SettingRow
-            label="Weekly report"
-            desc="Summary every Sunday"
-            right={<Pressable onPress={() => setNotifs(n => ({ ...n, weekly: !n.weekly }))}><Toggle on={notifs.weekly} /></Pressable>}
+            label="Weekly summary"
+            desc="Total trades, SUI spent and DEEP accumulated"
+            right={<Pressable onPress={() => onToggleNotif("weekly")}><Toggle on={notifPrefs.weekly} /></Pressable>}
           />
         </View>
 
