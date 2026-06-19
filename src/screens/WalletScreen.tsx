@@ -29,9 +29,6 @@ function usd(n: number, d = 2) {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-function shortAddr(a: string) {
-  return `${a.slice(0, 6)}...${a.slice(-4)}`;
-}
 
 const TOKEN_META = {
   SUI:  { color: "#6FBCF0", bg: "rgba(111,188,240,0.12)" },
@@ -76,36 +73,34 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
           colors={isDark ? ["#0c1418", "#080f12"] : ["#f0f9ff", "#e0f2fe"]}
           style={[s.heroCard, { borderColor: colors.border2 }]}
         >
-          {/* Top row: label + network badge */}
+          {/* Balance + network on same row */}
           <View style={s.heroTopRow}>
-            <Text style={[s.heroLabel, { color: colors.text3 }]}>TOTAL BALANCE</Text>
+            {loading
+              ? <Skeleton w={180} h={38} />
+              : <Text style={[s.heroVal, { color: colors.text }]}>{usd(totalUsd, 2)}</Text>
+            }
             <View style={[s.netChip, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
               <View style={[s.netDot, { backgroundColor: colors.accent }]} />
               <Text style={[s.netText, { color: colors.accent }]}>Testnet</Text>
             </View>
           </View>
 
-          {/* Balance */}
-          {loading
-            ? <Skeleton w={200} h={48} />
-            : <Text style={[s.heroVal, { color: colors.text }]}>{usd(totalUsd, 2)}</Text>
-          }
-
-          {/* Address chip */}
-          <Pressable
-            style={[s.addrChip, { backgroundColor: colors.bgSoft2, borderColor: colors.border }]}
-            onPress={copy}
-          >
-            <Ionicons name="wallet-outline" size={13} color={colors.text3} />
-            <Text style={[s.addrText, { color: colors.text2 }]}>
-              {address ? shortAddr(address) : "—"}
-            </Text>
-            <Ionicons
-              name={copied ? "checkmark" : "copy-outline"}
-              size={13}
-              color={copied ? colors.accent : colors.text3}
-            />
-          </Pressable>
+          {/* Full address — tappable to copy, wraps naturally */}
+          {address ? (
+            <Pressable style={s.addrRow} onPress={copy}>
+              <Text style={[s.addrFull, { color: colors.text3 }]} selectable={false}>
+                {address}
+              </Text>
+              <Ionicons
+                name={copied ? "checkmark-circle" : "copy-outline"}
+                size={14}
+                color={copied ? colors.accent : colors.text3}
+                style={{ marginTop: 1 }}
+              />
+            </Pressable>
+          ) : (
+            <Skeleton w="80%" h={13} />
+          )}
         </LinearGradient>
 
         {/* ── Holdings ── */}
@@ -208,17 +203,16 @@ const s = StyleSheet.create({
   scroll: { padding: 16, gap: 14 },
 
   // Hero
-  heroCard:   { borderRadius: 20, borderWidth: 1, padding: 20, gap: 14 },
+  heroCard:   { borderRadius: 18, borderWidth: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14, gap: 10 },
   heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  heroLabel:  { fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  heroVal:    { fontSize: 40, fontWeight: "700", letterSpacing: -1.5 },
+  heroVal:    { fontSize: 36, fontWeight: "700", letterSpacing: -1.5, flex: 1 },
 
-  netChip:  { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 100, borderWidth: 1 },
+  netChip:  { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 100, borderWidth: 1, marginLeft: 10 },
   netDot:   { width: 6, height: 6, borderRadius: 3 },
   netText:  { fontSize: 11, fontWeight: "600" },
 
-  addrChip: { flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
-  addrText: { fontSize: 13, fontFamily: "monospace" },
+  addrRow:  { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  addrFull: { flex: 1, fontSize: 11, fontFamily: "monospace", lineHeight: 17 },
 
   // Card
   card:     { borderRadius: 16, borderWidth: 1, padding: 16 },
