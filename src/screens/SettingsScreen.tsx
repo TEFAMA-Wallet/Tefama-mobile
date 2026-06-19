@@ -100,8 +100,8 @@ export function SettingsScreen({ vault }: Props) {
               <Text style={[s.profileName, { color: colors.text }]}>{name}</Text>
               <Text style={[s.profileEmail, { color: colors.text2 }]}>{email}</Text>
               <View style={s.badgeRow}>
-                <View style={[s.zkBadge, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
-                  <Text style={[s.zkText, { color: colors.accent }]}>zkLogin</Text>
+                <View style={[s.zkBadge, { backgroundColor: colors.bgSoft3, borderColor: colors.border }]}>
+                  <Text style={[s.zkText, { color: colors.text3 }]}>zkLogin</Text>
                 </View>
                 <View style={[s.zkBadge, { backgroundColor: colors.bgSoft3, borderColor: colors.border }]}>
                   <Text style={[s.zkText, { color: colors.text3 }]}>Sui Testnet</Text>
