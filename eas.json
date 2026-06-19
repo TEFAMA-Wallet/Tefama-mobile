@@ -1,17 +1,9 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 5.0.0",
+    "appVersionSource": "local"
   },
   "build": {
-    "development": {
-      "distribution": "internal",
-      "android": {
-        "resourceClass": "default"
-      },
-      "ios": {
-        "resourceClass": "m-medium"
-      }
-    },
     "preview": {
       "distribution": "internal",
       "android": {
@@ -19,7 +11,14 @@
         "buildType": "apk"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "simulator": false
+      }
+    },
+    "simulator": {
+      "ios": {
+        "resourceClass": "m-medium",
+        "simulator": true
       }
     },
     "production": {
