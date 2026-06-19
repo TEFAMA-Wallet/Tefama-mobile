@@ -1,93 +1,116 @@
 # TEFAMA Mobile
 
-> Autonomous AI trading agents — in your pocket.
+> **Sui Overflow Hackathon · Track 2: Autonomous Agent Wallet — Mobile Companion**
 
-TEFAMA is a React Native mobile application built with Expo that lets users create, monitor, and manage on-chain autonomous trading agents. Each agent executes a defined strategy within a hard budget ceiling and time limit, fully on-chain, with one-tap revocation.
+TEFAMA Mobile is the React Native / Expo companion to [TEFAMA Web](https://github.com/TEFAMA-Wallet/Tefama-website). Sign in with Google, and your on-chain DCA agent — created on the web app or directly in mobile — is right there: live vault balance, every executed trade, real-time P&L, and full pause/revoke control. No seed phrases. No wallet extensions. Everything from the same zkLogin Google account.
 
 ---
 
-## Screenshots
+## Relationship to the Web App
 
-| Splash | Onboarding | Connect |
-|--------|------------|---------|
-| Dark splash with animated logo | 3-slide feature carousel | zkLogin — no seed phrase |
+TEFAMA Mobile does **not** run its own backend. It connects directly to the same API that powers [tefama-website.vercel.app](https://tefama-website.vercel.app):
 
-| Dashboard | Agents | Activity |
-|-----------|--------|----------|
-| Portfolio balance + sparkline | Agent list with budget bars | Full on-chain transaction log |
+```
+TEFAMA Web (Next.js · Vercel)
+  │
+  ├── /api/price          → SUI & DEEP market data, 24h stats
+  ├── /api/wallet/:addr   → SUI/USDC/DEEP balances + vault state
+  ├── /api/trades         → on-chain trade history for a vault
+  └── /api/agent/run      → triggers the DCA agent manually
+        │
+        ▼
+TEFAMA Mobile (Expo · React Native)
+  reads the same data, same user address, same vault
+```
+
+An agent created on the web appears instantly in the mobile app when you log in with the same Google account. Your vault ID is resolved from your wallet address — nothing is hardcoded per user.
+
+---
+
+## What the App Does
+
+| Screen | What you see |
+|---|---|
+| **Splash** | Animated logo entrance with staggered ring expansion |
+| **Connect** | Google sign-in via Sui zkLogin — one tap, no seed phrase |
+| **Dashboard** | Portfolio value · trade count · P&L · SUI price · My Agents card · recent trades |
+| **Wallet** | Total balance hero card · token holdings (SUI, USDC, DEEP) with live logos · DCA vault budget bar |
+| **Activity** | Full on-chain trade history · summary strip · pull-to-refresh |
+| **Analytics** | Market data (price, 24h high/low/volume) · DCA performance (avg buy price, DEEP acquired, ROI) · portfolio allocation |
+| **Settings** | Profile · wallet address · explorer link · dark/light mode · notifications · security |
+| **Agent Details** | Circular budget ring · vault stats · trade log · pause / revoke controls |
 
 ---
 
 ## Features
 
-- **Autonomous agents** — create agents that execute DCA, Smart Buy, Grid Trading, or custom strategies on-chain
-- **Hard budget caps** — every agent is constrained by an on-chain spend ceiling and time limit it cannot exceed
-- **One-tap revocation** — instantly kill any agent; remaining funds return to your wallet
-- **zkLogin** — sign in with Google or Apple, no seed phrases or browser extensions needed
-- **Portfolio dashboard** — live balance, sparkline performance chart, active agent hero card with circular progress ring
-- **Activity log** — full history of on-chain executions with status (confirmed / pending / failed)
-- **4-step wizard** — guided agent creation with real-time risk assessment
-- **Dark / light theme** — persisted across sessions via AsyncStorage
+- **zkLogin auth** — Google OAuth maps to a Sui wallet address via zkLogin. No extensions, no seed phrases, no passwords.
+- **Live vault sync** — vault state and trade history are fetched from the same on-chain data source as the web app, keyed to the logged-in user's address.
+- **Real token logos** — SUI, USDC, and DEEP icons are fetched live from the CoinGecko API and cached for the session.
+- **Autonomous DCA agent** — the agent on-chain buys DEEP with SUI on DeepBook v3 on a cron schedule. The mobile app shows every execution as it happens.
+- **Budget enforcement** — the Move contract's hot-potato pattern makes it physically impossible for the agent to exceed its daily SUI cap. The mobile UI reflects this in the vault progress bars.
+- **Pause / revoke** — one tap to pause the agent or revoke it entirely; remaining funds return to the vault.
+- **Notification bell** — real-time feed of trade executions, budget warnings (>80% used), and agent state changes.
+- **Dark / light theme** — full theme system persisted via AsyncStorage. Primary is dark; light mode available from Settings.
+- **Pull-to-refresh** — activity feed and all polling hooks refresh on demand, with a refresh icon in the Activity AppBar.
+
+---
+
+## Architecture
+
+```
+src/
+├── AppContainer.tsx          # State-machine navigation (no nav library)
+├── theme.ts                  # Color tokens — dark & light
+├── components/
+│   ├── AppBar.tsx            # Shared screen header (notification bell, actions)
+│   ├── BottomNav.tsx         # 5-tab bar
+│   ├── NotificationBell.tsx  # Live event feed
+│   ├── CircularProgress.tsx  # SVG budget ring on agent detail
+│   └── TxDetailModal.tsx     # Transaction bottom sheet
+├── lib/
+│   ├── AuthContext.tsx        # zkLogin session (Google OAuth via website proxy)
+│   ├── ThemeContext.tsx       # Dark/light toggle + AsyncStorage persistence
+│   ├── useOnchain.ts          # usePrice · useWallet · useTrades (polling hooks)
+│   ├── useTokenLogos.ts       # CoinGecko logo fetcher with session cache
+│   ├── useNotifications.ts    # In-app notification engine
+│   └── constants.ts           # API_BASE · network · coin types
+└── screens/
+    ├── SplashScreen.tsx
+    ├── ConnectScreen.tsx
+    ├── DashboardScreen.tsx
+    ├── WalletScreen.tsx
+    ├── ActivityScreen.tsx
+    ├── AnalyticsScreen.tsx
+    ├── SettingsScreen.tsx
+    ├── AgentDetailsScreen.tsx
+    ├── TemplatesScreen.tsx
+    ├── CreateAgentScreen.tsx
+    └── AgentCreatedScreen.tsx
+```
+
+**Navigation** is a plain `useState` string enum in `AppContainer` — no React Navigation, no router library. Every screen is a regular component; transitions are instant re-renders.
+
+**Data polling** uses a generic `usePolling<T>(url, interval)` hook that starts on mount, re-fetches on URL change, and cleans up the interval on unmount. `useWallet(address)` polls every 15 s; `useTrades(vaultId)` every 30 s; `usePrice()` every 20 s.
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Framework | [Expo](https://expo.dev) SDK 54 |
-| Language | TypeScript |
+| Language | TypeScript (strict) |
 | UI primitives | React Native 0.81 |
-| Navigation | State-machine router (no library) |
-| Charts | `react-native-svg` |
-| Icons | `@expo/vector-icons` (Ionicons) |
+| Navigation | Custom state-machine (`useState`) |
+| Auth | Sui zkLogin · `expo-web-browser` · Google OAuth |
 | Gradients | `expo-linear-gradient` |
+| Haptics | `expo-haptics` |
+| Icons | `@expo/vector-icons` (Ionicons) |
 | Storage | `@react-native-async-storage/async-storage` |
+| Token logos | CoinGecko `/coins/markets` API |
+| Backend | [TEFAMA Web API](https://github.com/TEFAMA-Wallet/Tefama-website) |
 | Builds | EAS Build |
-
----
-
-## Project Structure
-
-```
-tefama-mobile/
-├── App.tsx                    # Root entry — SafeAreaProvider + ThemeProvider
-├── app.json                   # Expo config
-├── eas.json                   # EAS build profiles
-├── assets/
-│   └── branding/              # App icon, adaptive icon, splash image
-└── src/
-    ├── AppContainer.tsx        # Navigation state machine
-    ├── theme.ts                # Color tokens + spacing/radius scale
-    ├── components/
-    │   ├── AppBar.tsx          # Screen header
-    │   ├── AgentCard.tsx       # Agent list item with progress bar
-    │   ├── Badge.tsx           # Status pill (active / paused / revoked / confirmed …)
-    │   ├── BottomNav.tsx       # Tab bar with floating Create FAB
-    │   ├── BrandLogo.tsx       # SVG logo mark
-    │   ├── Button.tsx          # primary · secondary · danger · ghost + IconButton
-    │   ├── Card.tsx            # Elevated card container
-    │   ├── CircularProgress.tsx# SVG circular budget ring
-    │   ├── ProgressBar.tsx     # Linear budget bar
-    │   ├── SectionHead.tsx     # Section label with optional action
-    │   └── TxRow.tsx           # Transaction list row
-    ├── lib/
-    │   ├── data.ts             # Types + mock data (AGENTS, ACTIVITY, WALLET …)
-    │   └── ThemeContext.tsx    # Dark / light theme context + toggle
-    └── screens/
-        ├── SplashScreen.tsx        # Animated logo entrance
-        ├── OnboardingScreen.tsx    # 3-slide feature carousel
-        ├── ConnectScreen.tsx       # zkLogin (Google / Apple)
-        ├── DashboardScreen.tsx     # Home tab — portfolio + active agent
-        ├── AgentsScreen.tsx        # Agents tab — list + filters
-        ├── ActivityScreen.tsx      # Activity tab — tx log + filters
-        ├── SettingsScreen.tsx      # Settings tab
-        ├── AgentDetailsScreen.tsx  # Agent detail — ring + stats + executions
-        ├── CreateAgentScreen.tsx   # 4-step agent creation wizard
-        ├── TemplatesScreen.tsx     # Strategy template picker
-        ├── AgentCreatedScreen.tsx  # Success screen
-        └── TxDetailModal.tsx       # Transaction detail bottom sheet
-```
 
 ---
 
@@ -96,8 +119,7 @@ tefama-mobile/
 ### Prerequisites
 
 - Node.js 18+
-- Expo CLI (`npm install -g expo-cli`)
-- Expo Go app on your phone **or** an Android / iOS simulator
+- Expo Go on your phone **or** an Android / iOS simulator
 
 ### Install & run
 
@@ -108,71 +130,65 @@ npm install
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** on your device, or press:
-- `a` — open Android emulator
-- `i` — open iOS simulator
-- `w` — open in browser (web mode)
+Scan the QR with **Expo Go**, or press `a` for Android emulator / `i` for iOS simulator.
+
+The app connects to `https://tefama-website.vercel.app` by default — no local backend needed.
 
 ---
 
-## Build & Deploy
+## Build
 
-TEFAMA uses [EAS Build](https://docs.expo.dev/build/introduction/) for production builds.
+TEFAMA Mobile uses [EAS Build](https://docs.expo.dev/build/introduction/) for production APKs and IPAs.
 
 ```bash
-# Install EAS CLI
 npm install -g eas-cli
-
-# Log in to your Expo account
 eas login
 
-# Development build (internal distribution)
-eas build --profile development --platform android
-
-# Preview APK
+# Internal preview APK
 eas build --profile preview --platform android
 
-# Production build
+# Production
 eas build --profile production --platform all
 ```
 
 ---
 
-## Environment Variables
+## Navigation Flow
 
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
+```
+Splash
+  └── Connect (Google zkLogin)
+        └── Bottom Nav
+              ├── Dashboard
+              │     └── Agent Details (pause / revoke / trades)
+              ├── Wallet
+              ├── Activity
+              ├── Analytics
+              └── Settings
+                    └── New Agent
+                          └── Templates → Create → Created
 ```
 
 ---
 
-## Screens Flow
+## On-Chain Components (from the Web App)
 
-```
-Splash → Onboarding → Connect (zkLogin)
-                          ↓
-              ┌───────────────────────┐
-              │     Bottom Nav        │
-              │  Dashboard · Agents   │
-              │  [+ Create] · Activity│
-              │       · Settings      │
-              └───────────────────────┘
-                    ↓           ↓
-             Agent Details   Create Agent Wizard
-                                  ↓
-                            Templates → Wizard → Created
-```
+The mobile app is a read/write interface to the same contracts deployed by the web app. No new contracts.
+
+**`vault.move`** — Budget policy object. Holds SUI and DEEP balances, tracks daily spend window, enforces agent allowlist. The mobile app reads `budgetCap`, `spent`, and `paused` fields to render progress bars and status badges.
+
+**DeepBook BalanceManager** — The agent's trading account on DeepBook v3. Trades execute via `place_market_order` against the DEEP/SUI pool. The mobile Activity screen shows each `TradeSettled` event.
+
+**zkLogin** — The same Google OAuth → Sui address derivation used by the web. The mobile uses the website's `/api/zklogin/salt` endpoint so both apps share the same derived address for the same Google account.
 
 ---
 
-## Contributing
+## Related
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Commit your changes
-4. Open a pull request
+- **Web App** — [github.com/TEFAMA-Wallet/Tefama-website](https://github.com/TEFAMA-Wallet/Tefama-website)
+- **Live Demo** — [tefama-website.vercel.app](https://tefama-website.vercel.app)
+- **Sui Testnet Explorer** — [suiscan.xyz/testnet](https://suiscan.xyz/testnet)
+- **DeepBook DEEP/SUI Pool** — `0x48c95963e9eac37a316b7ae04a0deb761bcdcc2b67912374d6036e7f0e9bae9f`
 
 ---
 
