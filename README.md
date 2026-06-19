@@ -136,16 +136,54 @@ The app connects to `https://tefama-website.vercel.app` by default — no local 
 
 ---
 
-## Build
+## Try It Now
 
-TEFAMA Mobile uses [EAS Build](https://docs.expo.dev/build/introduction/) for production APKs and IPAs.
+Pre-built binaries are available — no dev environment needed.
+
+| Platform | Type | Link |
+|---|---|---|
+| **Android** | APK (install directly) | [Download APK](https://expo.dev/accounts/tevinprime66/projects/tefama-mobile/builds/d78ed8f7-5048-4145-9499-fdf56f993cd2) |
+| **iOS** | Simulator build (.app) | [Download .tar.gz](https://expo.dev/accounts/tevinprime66/projects/tefama-mobile/builds/8d5203bb-f5f7-4641-b403-72e72ed5fa9a) |
+
+### Android — install on a real device
+
+1. Open the [Android build link](https://expo.dev/accounts/tevinprime66/projects/tefama-mobile/builds/d78ed8f7-5048-4145-9499-fdf56f993cd2) on your Android phone
+2. Tap **Download** and install the APK
+3. If prompted, allow installs from unknown sources under **Settings → Security**
+
+### iOS — run on Simulator (Mac only)
+
+```bash
+# 1. Download and extract the build
+curl -L "https://expo.dev/artifacts/eas/G_k_CkanGGtoi-wwP7y0oO-QQVVnJ5Km0SH1LdCyW-8.tar.gz" -o tefama-ios.tar.gz
+tar -xzf tefama-ios.tar.gz
+
+# 2. Boot a simulator and install
+xcrun simctl boot "iPhone 16"
+xcrun simctl install booted Tefama.app
+xcrun simctl launch booted com.tefama.mobile
+```
+
+> iOS device builds (for real iPhones without a simulator) require an Apple Developer account. Run `eas build --profile preview --platform ios` to generate one.
+
+---
+
+## Build Your Own
+
+TEFAMA Mobile uses [EAS Build](https://docs.expo.dev/build/introduction/).
 
 ```bash
 npm install -g eas-cli
 eas login
 
-# Internal preview APK
+# Android APK — internal testing
 eas build --profile preview --platform android
+
+# iOS Simulator build — no Apple account needed
+eas build --profile simulator --platform ios
+
+# iOS real device — requires Apple Developer account
+eas build --profile preview --platform ios
 
 # Production
 eas build --profile production --platform all
