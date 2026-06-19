@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTokenLogos } from "../lib/useTokenLogos";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -45,6 +46,7 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
 
   const [copied, setCopied] = useState(false);
   const address = session?.address ?? "";
+  const logos = useTokenLogos(["SUI", "USDC", "DEEP"]);
   const loading = walletLoading || priceLoading;
 
   const totalUsd = suiBalance * price + usdcBalance + deepBalance * deepPrice;
@@ -133,9 +135,12 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
                 const isLast = i === tokens.length - 1;
                 return (
                   <View key={t.sym} style={[s.tokenRow, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                    {/* Token icon */}
+                    {/* Token icon — real logo from CoinGecko, falls back to letter */}
                     <View style={[s.tokenIcon, { backgroundColor: meta.bg, borderWidth: 1, borderColor: meta.color + "30" }]}>
-                      <Text style={[s.tokenLetter, { color: meta.color }]}>{t.sym[0]}</Text>
+                      {logos[t.sym]
+                        ? <Image source={{ uri: logos[t.sym]! }} style={s.tokenImg} />
+                        : <Text style={[s.tokenLetter, { color: meta.color }]}>{t.sym[0]}</Text>
+                      }
                     </View>
 
                     {/* Name + price */}
@@ -224,6 +229,7 @@ const s = StyleSheet.create({
   // Token row
   tokenRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 16, gap: 14 },
   tokenIcon:  { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  tokenImg:   { width: 28, height: 28, borderRadius: 14 },
   tokenLetter:{ fontSize: 17, fontWeight: "800" },
   tokenInfo:  { flex: 1 },
   tokenSym:   { fontSize: 15, fontWeight: "700" },
