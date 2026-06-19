@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
@@ -16,7 +15,6 @@ interface Props {
   vault:         Vault | null;
   walletLoading: boolean;
   priceLoading:  boolean;
-  bellEl?:       ReactNode;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -31,7 +29,7 @@ function usd(n: number, d = 2) {
 
 function shortAddr(a: string) { return `${a.slice(0, 8)}...${a.slice(-6)}`; }
 
-export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBalance, vault, walletLoading, priceLoading, bellEl }: Props) {
+export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBalance, vault, walletLoading, priceLoading }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session } = useAuth();
@@ -55,30 +53,19 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <Text style={[s.pageTitle, { color: colors.text }]}>Wallet</Text>
-        {bellEl}
-        <Text style={[s.pageSub, { color: colors.text2 }]}>Your Sui wallet · zkLogin · Testnet</Text>
-      </View>
-
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Balance hero */}
         <View style={[s.heroCard, { backgroundColor: colors.bg3, borderColor: colors.border2 }]}>
           <View style={s.heroTop}>
-            <View>
-              <Text style={[s.heroLabel, { color: colors.text3 }]}>TOTAL BALANCE</Text>
-              {loading ? <Skeleton w={180} h={40} /> : (
-                <>
-                  <Text style={[s.heroVal, { color: colors.text, fontFamily: "monospace" }]}>{usd(totalUsd, 2)}</Text>
-                  <Text style={[s.heroSub, { color: colors.text2, fontFamily: "monospace" }]}>
-                    SUI @ {usd(price, 4)} · DEEP @ {usd(deepPrice, 6)} · DeepBook live
-                  </Text>
-                </>
-              )}
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 8 }}>
-              <Text style={[s.zkLabel, { color: colors.text3 }]}>zkLogin · Google</Text>
+            {/* Balance label + value */}
+            <Text style={[s.heroLabel, { color: colors.text3 }]}>TOTAL BALANCE</Text>
+            {loading ? <Skeleton w={180} h={40} /> : (
+              <Text style={[s.heroVal, { color: colors.text, fontFamily: "monospace" }]}>{usd(totalUsd, 2)}</Text>
+            )}
+
+            {/* Address row: copy button left, network badge right */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Pressable
                 style={[s.addrBtn, { backgroundColor: colors.bgSoft2, borderColor: colors.border2 }]}
                 onPress={copy}
@@ -167,16 +154,10 @@ const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
 
-  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
-  pageSub:   { fontSize: 13, marginTop: 2 },
-
   heroCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
-  heroTop:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  heroLabel:{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 },
+  heroTop:  { flexDirection: "column", gap: 12 },
+  heroLabel:{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase" },
   heroVal:  { fontSize: 36, fontWeight: "700", letterSpacing: -1 },
-  heroSub:  { fontSize: 13, marginTop: 4 },
-  zkLabel:  { fontSize: 12 },
   addrBtn:  { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
   addrText: { fontSize: 12 },
   netRow:   { flexDirection: "row", alignItems: "center", gap: 5 },

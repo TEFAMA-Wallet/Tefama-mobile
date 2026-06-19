@@ -1,5 +1,4 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { ReactNode } from "react";
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -7,7 +6,7 @@ import { useAuth } from "../lib/AuthContext";
 import type { Vault } from "../lib/useOnchain";
 import { useState } from "react";
 
-interface Props { vault: Vault | null; bellEl?: ReactNode }
+interface Props { vault: Vault | null }
 
 function Toggle({ on }: { on: boolean }) {
   const { isDark } = useColorTheme();
@@ -55,10 +54,11 @@ function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) 
   );
 }
 
-export function SettingsScreen({ vault, bellEl }: Props) {
+export function SettingsScreen({ vault }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
+  // Note: notification and security toggles are UI-only for now
   const [notifs, setNotifs] = useState({ budget: true, trade: true, weekly: false });
   const [security, setSecurity] = useState({ biometric: true, lock: false });
 
@@ -76,13 +76,14 @@ export function SettingsScreen({ vault, bellEl }: Props) {
     ]);
   }
 
+  function openExplorer() {
+    if (addr) {
+      Linking.openURL(`https://suiexplorer.com/address/${addr}?network=testnet`);
+    }
+  }
+
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <Text style={[s.pageTitle, { color: colors.text }]}>Settings</Text>
-        {bellEl}
-      </View>
-
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Profile hero */}
@@ -115,7 +116,7 @@ export function SettingsScreen({ vault, bellEl }: Props) {
           <InfoRow label="Address"      value={shortAddr}    mono />
           <InfoRow label="Vault status" value={vaultStatus}       />
           <InfoRow label="Network"      value="Sui Testnet"       />
-          <Pressable style={s.explorerLink}>
+          <Pressable style={s.explorerLink} onPress={openExplorer}>
             <Text style={[s.explorerText, { color: colors.accent }]}>View on Explorer</Text>
             <Ionicons name="open-outline" size={13} color={colors.accent} />
           </Pressable>
@@ -196,8 +197,6 @@ const sh = StyleSheet.create({
 const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
-  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
 
   profileCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
   profileRow:  { flexDirection: "row", alignItems: "center", gap: 14 },

@@ -1,5 +1,4 @@
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -13,7 +12,6 @@ interface Props {
   onRefresh:() => void;
   onViewTx: (tx: Tx) => void;
   deepPrice:number;
-  bellEl?:  ReactNode;
 }
 
 function Skeleton({ w = 80, h = 14 }: { w?: number | string; h?: number }) {
@@ -26,7 +24,7 @@ function usd(n: number, d = 2) {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewTx, deepPrice, bellEl }: Props) {
+export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewTx, deepPrice }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
@@ -42,23 +40,6 @@ export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewT
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <View>
-          <Text style={[s.pageTitle, { color: colors.text }]}>Activity log</Text>
-          <Text style={[s.pageSub, { color: colors.text2 }]}>All on-chain executions · Sui testnet</Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-          {bellEl}
-          <Pressable
-            onPress={onRefresh}
-            style={[s.refreshBtn, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}
-          >
-          <Ionicons name="refresh-outline" size={14} color={colors.text2} />
-          <Text style={[s.refreshText, { color: colors.text2 }]}>Refresh</Text>
-        </Pressable>
-        </View>
-      </View>
-
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
@@ -131,12 +112,6 @@ export function ActivityScreen({ trades, pnl, count, loading, onRefresh, onViewT
 const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
-
-  header:      { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  pageTitle:   { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
-  pageSub:     { fontSize: 13, marginTop: 2 },
-  refreshBtn:  { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, marginTop: 2 },
-  refreshText: { fontSize: 12, fontWeight: "500" },
 
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   summaryCard: { width: "48%", flexGrow: 1, borderRadius: 12, borderWidth: 1, padding: 14 },

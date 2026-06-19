@@ -1,5 +1,4 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import type { ReactNode } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
@@ -23,7 +22,6 @@ interface Props {
   roi:          number;
   count:        number;
   loading:      boolean;
-  bellEl?:      ReactNode;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -72,7 +70,7 @@ function MarketRow({ label, value, change, loading: load }: { label: string; val
   );
 }
 
-export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, high24h, low24h, volume24h, suiBalance, usdcBalance, deepBalance, vault, trades, pnl, roi, count, loading, bellEl }: Props) {
+export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, high24h, low24h, volume24h, suiBalance, usdcBalance, deepBalance, vault, trades, pnl, roi, count, loading }: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
@@ -95,14 +93,6 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg }]}>
-      <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <View>
-          <Text style={[s.pageTitle, { color: colors.text }]}>Analytics</Text>
-          <Text style={[s.pageSub, { color: colors.text2 }]}>Portfolio & agent performance · Sui testnet</Text>
-        </View>
-        {bellEl}
-      </View>
-
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Key stats */}
@@ -202,9 +192,6 @@ const mr = StyleSheet.create({
 const s = StyleSheet.create({
   root:   { flex: 1 },
   scroll: { padding: 16, gap: 14 },
-  header:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  pageTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4 },
-  pageSub:   { fontSize: 13, marginTop: 2 },
   statGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   panel:     { borderRadius: 14, borderWidth: 1, padding: 16 },
   panelTitle:{ fontSize: 15, fontWeight: "600", marginBottom: 12 },

@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet }    from "react-native";
-import { BottomNav }            from "./components/BottomNav";
-import { NotificationBell }     from "./components/NotificationBell";
-import { TxDetailModal }        from "./screens/TxDetailModal";
-import { SplashScreen }         from "./screens/SplashScreen";
-import { ConnectScreen }        from "./screens/ConnectScreen";
-import { DashboardScreen }      from "./screens/DashboardScreen";
-import { WalletScreen }         from "./screens/WalletScreen";
-import { ActivityScreen }       from "./screens/ActivityScreen";
-import { AnalyticsScreen }      from "./screens/AnalyticsScreen";
-import { SettingsScreen }       from "./screens/SettingsScreen";
-import { AgentDetailsScreen }   from "./screens/AgentDetailsScreen";
-import { CreateAgentScreen }    from "./screens/CreateAgentScreen";
-import { TemplatesScreen }      from "./screens/TemplatesScreen";
-import { AgentCreatedScreen }   from "./screens/AgentCreatedScreen";
-import type { Tx, Agent }       from "./lib/data";
-import type { NavTab }          from "./components/BottomNav";
-import { useAuth }              from "./lib/AuthContext";
+import { Pressable, Text, View, StyleSheet } from "react-native";
+import { Ionicons }                          from "@expo/vector-icons";
+import { BottomNav }                         from "./components/BottomNav";
+import { AppBar }                            from "./components/AppBar";
+import { NotificationBell }                  from "./components/NotificationBell";
+import { TxDetailModal }                     from "./screens/TxDetailModal";
+import { SplashScreen }                      from "./screens/SplashScreen";
+import { ConnectScreen }                     from "./screens/ConnectScreen";
+import { DashboardScreen }                   from "./screens/DashboardScreen";
+import { WalletScreen }                      from "./screens/WalletScreen";
+import { ActivityScreen }                    from "./screens/ActivityScreen";
+import { AnalyticsScreen }                   from "./screens/AnalyticsScreen";
+import { SettingsScreen }                    from "./screens/SettingsScreen";
+import { AgentDetailsScreen }                from "./screens/AgentDetailsScreen";
+import { CreateAgentScreen }                 from "./screens/CreateAgentScreen";
+import { TemplatesScreen }                   from "./screens/TemplatesScreen";
+import { AgentCreatedScreen }                from "./screens/AgentCreatedScreen";
+import type { Tx, Agent }                    from "./lib/data";
+import type { NavTab }                       from "./components/BottomNav";
+import { useAuth }                           from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
-import { useNotifications }     from "./lib/useNotifications";
-import { VAULT_ID }             from "./lib/constants";
+import { useNotifications }                  from "./lib/useNotifications";
+import { VAULT_ID }                          from "./lib/constants";
 
 type Screen =
   | "splash" | "connect"
@@ -27,6 +29,14 @@ type Screen =
   | "agent-detail" | "create" | "templates" | "created";
 
 const TAB_SCREENS: NavTab[] = ["home", "wallet", "activity", "analytics", "settings"];
+
+const PAGE_TITLES: Record<string, string> = {
+  home:      "Dashboard",
+  wallet:    "Wallet",
+  activity:  "Activity",
+  analytics: "Analytics",
+  settings:  "Settings",
+};
 
 function tradeToTx(t: Trade): Tx {
   return {
@@ -105,7 +115,7 @@ export function AppContainer() {
     setScreen(key);
   }
 
-  // Notification bell component — passed to screens that need it in their header
+  // Notification bell — rendered in shared AppBar
   const bellEl = (
     <NotificationBell
       notifs={notifState.notifs}
@@ -118,6 +128,39 @@ export function AppContainer() {
       onMarkRead={notifState.markRead}
     />
   );
+
+  // Per-tab AppBar actions
+  const tabActions: React.ReactNode = (() => {
+    if (tab === "home") {
+      return (
+        <>
+          <Pressable
+            onPress={() => go("templates")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06b6d4", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 }}
+          >
+            <Ionicons name="add" size={15} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>New agent</Text>
+          </Pressable>
+          {bellEl}
+        </>
+      );
+    }
+    if (tab === "activity") {
+      return (
+        <>
+          <Pressable
+            onPress={tradeData.refresh}
+            hitSlop={8}
+            style={{ padding: 6 }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#06b6d4" />
+          </Pressable>
+          {bellEl}
+        </>
+      );
+    }
+    return bellEl;
+  })();
 
   const commonDashProps = {
     price:         priceData.price,
@@ -139,7 +182,6 @@ export function AppContainer() {
     onViewAgent:    () => go("agent-detail"),
     onViewActivity: () => go("activity"),
     onViewTx:       setSelTx,
-    bellEl,
   };
 
   let content: React.ReactNode;
@@ -168,7 +210,6 @@ export function AppContainer() {
           vault={walletData.vault}
           walletLoading={walletData.loading}
           priceLoading={priceData.loading}
-          bellEl={bellEl}
         />
       );
       break;
@@ -183,7 +224,6 @@ export function AppContainer() {
           onRefresh={tradeData.refresh}
           onViewTx={setSelTx}
           deepPrice={priceData.deepPrice}
-          bellEl={bellEl}
         />
       );
       break;
@@ -207,13 +247,12 @@ export function AppContainer() {
           roi={tradeData.roi}
           count={tradeData.count}
           loading={priceData.loading || walletData.loading || tradeData.loading}
-          bellEl={bellEl}
         />
       );
       break;
 
     case "settings":
-      content = <SettingsScreen vault={walletData.vault} bellEl={bellEl} />;
+      content = <SettingsScreen vault={walletData.vault} />;
       break;
 
     case "agent-detail":
@@ -265,6 +304,9 @@ export function AppContainer() {
 
   return (
     <View style={s.root}>
+      {isTabScreen && (
+        <AppBar title={PAGE_TITLES[tab] ?? ""} actions={tabActions} />
+      )}
       <View style={s.content}>{content}</View>
       {isTabScreen && <BottomNav value={tab} onChange={handleTabChange} />}
       <TxDetailModal tx={selTx} onClose={() => setSelTx(null)} />
