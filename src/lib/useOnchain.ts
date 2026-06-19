@@ -123,18 +123,24 @@ interface TradesData {
   count:  number;
 }
 
-export function useTrades(vaultId?: string, deepPrice?: number) {
+// vaultId:
+//   undefined  → wallet still loading, hold off fetching (show loading)
+//   null       → wallet loaded but user has no vault yet (show empty)
+//   string     → real vault ID, fetch trades for this vault
+export function useTrades(vaultId: string | null | undefined, deepPrice?: number) {
   const p = new URLSearchParams();
-  if (vaultId)   p.set("vault", vaultId);
   if (deepPrice) p.set("price", String(deepPrice));
-  const url = `${API_BASE}/api/trades?${p}`;
+  const url = typeof vaultId === "string"
+    ? `${API_BASE}/api/trades?vault=${encodeURIComponent(vaultId)}&${p}`
+    : null; // null → usePolling skips the request
   const { data, loading, error, refresh } = usePolling<TradesData>(url, 30_000);
   return {
     trades:  data?.trades ?? [],
     pnl:     data?.pnl    ?? 0,
     roi:     data?.roi    ?? 0,
     count:   data?.count  ?? 0,
-    loading,
+    // still "loading" while we don't know the vault ID yet
+    loading: loading || vaultId === undefined,
     error,
     refresh,
   };

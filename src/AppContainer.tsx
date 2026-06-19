@@ -21,7 +21,6 @@ import type { NavTab }                       from "./components/BottomNav";
 import { useAuth }                           from "./lib/AuthContext";
 import { usePrice, useWallet, useTrades, type Trade } from "./lib/useOnchain";
 import { useNotifications }                  from "./lib/useNotifications";
-import { VAULT_ID }                          from "./lib/constants";
 
 type Screen =
   | "splash" | "connect"
@@ -66,7 +65,16 @@ export function AppContainer() {
   // All data hooks
   const priceData  = usePrice();
   const walletData = useWallet(session?.address ?? null);
-  const tradeData  = useTrades(VAULT_ID, priceData.deepPrice);
+
+  // Derive vault ID from the logged-in user's wallet data.
+  // undefined while wallet is still loading (chains loading state into tradeData).
+  // null once wallet has loaded but user has no vault yet (shows empty/no-agent state).
+  // string once vault is confirmed → fetches this user's actual trades.
+  const userVaultId: string | null | undefined = walletData.loading
+    ? undefined
+    : (walletData.vault?.id ?? null);
+
+  const tradeData = useTrades(userVaultId, priceData.deepPrice);
 
   const liveTxs = tradeData.trades.map(tradeToTx);
 
@@ -76,7 +84,7 @@ export function AppContainer() {
   // Build live agent from vault data
   const vault = walletData.vault;
   const liveAgent: Agent = {
-    id:          VAULT_ID,
+    id:          vault?.id ?? "",
     name:        "DCA Agent",
     strategy:    "DCA",
     status:      vault?.paused ? "paused" : "active",
