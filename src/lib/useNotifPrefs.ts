@@ -10,7 +10,7 @@ export interface NotifPrefs {
 const KEY = "@tefama_notif_prefs_v2";
 const DEFAULTS: NotifPrefs = { trade: true, budget: true, weekly: false };
 
-export function useNotifPrefs() {
+export function useNotifPrefs(): { prefs: NotifPrefs; toggle: (key: keyof NotifPrefs) => void } {
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULTS);
 
   useEffect(() => {

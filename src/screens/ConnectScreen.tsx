@@ -5,7 +5,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
+// Dynamic require so the bundle doesn't hard-fail if haptics is unavailable
+// in certain Expo Go environments (works fine in native/EAS builds).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Haptics: any = null;
+try { Haptics = require("expo-haptics"); } catch { /* haptics unavailable */ }
 import { useAuth } from "../lib/AuthContext";
 
 const { width: W, height: H } = Dimensions.get("window");
@@ -55,14 +59,14 @@ export function ConnectScreen({ onConnected }: { onConnected: () => void }) {
   }, []);
 
   async function handleGoogle() {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await Haptics?.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setBusy(true);
     setError("");
     try {
       await login();
       onConnected();
     } catch (e) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await Haptics?.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(e instanceof Error ? e.message : "Sign-in failed — please try again");
       setBusy(false);
     }

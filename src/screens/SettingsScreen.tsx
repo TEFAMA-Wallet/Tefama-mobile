@@ -59,7 +59,9 @@ function SectionHead({ icon, title }: { icon: React.ReactNode; title: string }) 
   );
 }
 
-export function SettingsScreen({ vault, notifPrefs, onToggleNotif }: Props) {
+export function SettingsScreen({ vault, notifPrefs: notifPrefsRaw, onToggleNotif }: Props) {
+  // Safety: prefs may not yet be loaded from AsyncStorage on first render
+  const notifPrefs = notifPrefsRaw ?? { trade: true, budget: true, weekly: false };
   const { isDark, toggle } = useColorTheme();
   const { colors } = getTheme(isDark);
   const { session, logout } = useAuth();
