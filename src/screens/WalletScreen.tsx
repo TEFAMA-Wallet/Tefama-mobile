@@ -134,34 +134,24 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
                 return (
                   <View key={t.sym} style={[s.tokenRow, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
                     {/* Token icon */}
-                    <View style={[s.tokenIcon, { backgroundColor: meta.bg }]}>
+                    <View style={[s.tokenIcon, { backgroundColor: meta.bg, borderWidth: 1, borderColor: meta.color + "30" }]}>
                       <Text style={[s.tokenLetter, { color: meta.color }]}>{t.sym[0]}</Text>
                     </View>
 
                     {/* Name + price */}
                     <View style={s.tokenInfo}>
                       <Text style={[s.tokenSym, { color: colors.text }]}>{t.sym}</Text>
-                      <Text style={[s.tokenPrice, { color: colors.text3 }]}>
-                        {t.price > 0 ? usd(t.price, t.sym === "SUI" ? 4 : t.sym === "DEEP" ? 6 : 2) : "—"}
-                      </Text>
+                      <Text style={[s.tokenName, { color: colors.text3 }]}>{t.name}</Text>
                     </View>
 
-                    {/* Balance + alloc bar */}
+                    {/* Balance + USD */}
                     <View style={s.tokenRight}>
                       <Text style={[s.tokenBal, { color: colors.text }]}>
                         {t.balance.toLocaleString("en-US", { maximumFractionDigits: t.decimals })}
                       </Text>
-                      <View style={s.tokenMeta}>
-                        <Text style={[s.tokenUsd, { color: colors.text3 }]}>
-                          {t.usdVal > 0 ? usd(t.usdVal, 2) : "—"}
-                        </Text>
-                        <View style={[s.allocPill, { backgroundColor: meta.bg }]}>
-                          <Text style={[s.allocPct, { color: meta.color }]}>{alloc}%</Text>
-                        </View>
-                      </View>
-                      <View style={[s.allocBar, { backgroundColor: colors.bgSoft3 }]}>
-                        <View style={[s.allocFill, { width: `${alloc}%` as any, backgroundColor: meta.color }]} />
-                      </View>
+                      <Text style={[s.tokenUsd, { color: colors.text3 }]}>
+                        {t.usdVal > 0 ? usd(t.usdVal, 2) : "—"}
+                      </Text>
                     </View>
                   </View>
                 );
@@ -232,18 +222,15 @@ const s = StyleSheet.create({
   cardSub:  { fontSize: 12 },
 
   // Token row
-  tokenRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, gap: 12 },
-  tokenIcon:  { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  tokenLetter:{ fontSize: 16, fontWeight: "800" },
+  tokenRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 16, gap: 14 },
+  tokenIcon:  { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  tokenLetter:{ fontSize: 17, fontWeight: "800" },
   tokenInfo:  { flex: 1 },
   tokenSym:   { fontSize: 15, fontWeight: "700" },
-  tokenPrice: { fontSize: 12, marginTop: 2 },
-  tokenRight: { alignItems: "flex-end", gap: 2, minWidth: 100 },
+  tokenName:  { fontSize: 12, marginTop: 2 },
+  tokenRight: { alignItems: "flex-end" },
   tokenBal:   { fontSize: 15, fontWeight: "600", fontFamily: "monospace" },
-  tokenMeta:  { flexDirection: "row", alignItems: "center", gap: 6 },
-  tokenUsd:   { fontSize: 12 },
-  allocPill:  { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 100 },
-  allocPct:   { fontSize: 10, fontWeight: "700" },
+  tokenUsd:   { fontSize: 12, marginTop: 2 },
   allocBar:   { width: "100%", height: 3, borderRadius: 2, overflow: "hidden", marginTop: 4 },
   allocFill:  { height: "100%", borderRadius: 2 },
 

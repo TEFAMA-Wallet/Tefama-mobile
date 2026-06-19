@@ -99,13 +99,14 @@ export function SettingsScreen({ vault }: Props) {
             <View style={{ flex: 1 }}>
               <Text style={[s.profileName, { color: colors.text }]}>{name}</Text>
               <Text style={[s.profileEmail, { color: colors.text2 }]}>{email}</Text>
-              <View style={[s.zkBadge, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
-                <Text style={[s.zkText, { color: colors.accent }]}>zkLogin · Google</Text>
+              <View style={s.badgeRow}>
+                <View style={[s.zkBadge, { backgroundColor: colors.accentDim, borderColor: colors.accentB }]}>
+                  <Text style={[s.zkText, { color: colors.accent }]}>zkLogin</Text>
+                </View>
+                <View style={[s.zkBadge, { backgroundColor: colors.bgSoft3, borderColor: colors.border }]}>
+                  <Text style={[s.zkText, { color: colors.text3 }]}>Sui Testnet</Text>
+                </View>
               </View>
-            </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={[s.netLabel, { color: colors.text3 }]}>Network</Text>
-              <Text style={[s.netVal, { color: colors.accent }]}>Sui Testnet</Text>
             </View>
           </View>
         </View>
@@ -113,9 +114,8 @@ export function SettingsScreen({ vault }: Props) {
         {/* Wallet section */}
         <View style={[s.section, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
           <SectionHead icon={<Ionicons name="wallet-outline" size={18} color={colors.accent} />} title="Wallet" />
-          <InfoRow label="Address"      value={shortAddr}    mono />
-          <InfoRow label="Vault status" value={vaultStatus}       />
-          <InfoRow label="Network"      value="Sui Testnet"       />
+          <InfoRow label="Address"      value={shortAddr}  mono />
+          <InfoRow label="Vault status" value={vaultStatus}      />
           <Pressable style={s.explorerLink} onPress={openExplorer}>
             <Text style={[s.explorerText, { color: colors.accent }]}>View on Explorer</Text>
             <Ionicons name="open-outline" size={13} color={colors.accent} />
@@ -220,10 +220,9 @@ const s = StyleSheet.create({
   avatarPlaceholder: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", borderWidth: 2 },
   profileName: { fontSize: 17, fontWeight: "700", marginBottom: 2 },
   profileEmail:{ fontSize: 13, marginBottom: 6 },
-  zkBadge:     { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 100, borderWidth: 1 },
-  zkText:      { fontSize: 12, fontWeight: "600" },
-  netLabel:    { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 },
-  netVal:      { fontSize: 13, fontWeight: "600" },
+  badgeRow:    { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 6 },
+  zkBadge:     { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 100, borderWidth: 1 },
+  zkText:      { fontSize: 11, fontWeight: "600" },
 
   section:       { borderRadius: 14, borderWidth: 1, padding: 16 },
   explorerLink:  { flexDirection: "row", alignItems: "center", gap: 5, paddingTop: 14 },

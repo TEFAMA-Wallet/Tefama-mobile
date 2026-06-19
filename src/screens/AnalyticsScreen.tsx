@@ -1,27 +1,26 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useColorTheme } from "../lib/ThemeContext";
 import { getTheme } from "../theme";
 import type { Tx } from "../lib/data";
 import type { Vault } from "../lib/useOnchain";
 
 interface Props {
-  price:        number;
-  deepPrice:    number;
-  change24h:    number;
-  deepChange24h:number;
-  high24h:      number;
-  low24h:       number;
-  volume24h:    number;
-  suiBalance:   number;
-  usdcBalance:  number;
-  deepBalance:  number;
-  vault:        Vault | null;
-  trades:       Tx[];
-  pnl:          number;
-  roi:          number;
-  count:        number;
-  loading:      boolean;
+  price:         number;
+  deepPrice:     number;
+  change24h:     number;
+  deepChange24h: number;
+  high24h:       number;
+  low24h:        number;
+  volume24h:     number;
+  suiBalance:    number;
+  usdcBalance:   number;
+  deepBalance:   number;
+  vault:         Vault | null;
+  trades:        Tx[];
+  pnl:           number;
+  roi:           number;
+  count:         number;
+  loading:       boolean;
 }
 
 function Skeleton({ w = 80, h = 20 }: { w?: number | string; h?: number }) {
@@ -34,33 +33,19 @@ function usd(n: number, d = 2) {
   return "$" + n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-function StatPill({ label, value, sub, color, loading: load }: {
-  label: string; value: string; sub?: string; color?: string; loading?: boolean;
+function Row({ label, value, valueColor, change, loading: load }: {
+  label: string; value: string; valueColor?: string; change?: number; loading?: boolean;
 }) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
   return (
-    <View style={[sp.card, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-      <Text style={[sp.label, { color: colors.text3 }]}>{label}</Text>
-      {load ? <Skeleton w={100} h={26} /> : (
-        <Text style={[sp.value, color ? { color } : { color: colors.text }]}>{value}</Text>
-      )}
-      {sub && !load && <Text style={[sp.sub, { color: colors.text3 }]}>{sub}</Text>}
-    </View>
-  );
-}
-
-function MarketRow({ label, value, change, loading: load }: { label: string; value: string; change?: number; loading?: boolean }) {
-  const { isDark } = useColorTheme();
-  const { colors } = getTheme(isDark);
-  return (
-    <View style={[mr.row, { borderBottomColor: colors.border }]}>
-      <Text style={[mr.label, { color: colors.text2 }]}>{label}</Text>
-      {load ? <Skeleton w={70} h={16} /> : (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={[mr.value, { color: colors.text, fontFamily: "monospace" }]}>{value}</Text>
+    <View style={[r.row, { borderBottomColor: colors.border }]}>
+      <Text style={[r.label, { color: colors.text2 }]}>{label}</Text>
+      {load ? <Skeleton w={80} h={15} /> : (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={[r.value, { color: valueColor ?? colors.text, fontFamily: "monospace" }]}>{value}</Text>
           {change !== undefined && (
-            <Text style={[mr.change, { color: change >= 0 ? colors.accent : colors.red, fontFamily: "monospace" }]}>
+            <Text style={[r.change, { color: change >= 0 ? colors.accent : colors.red }]}>
               {change >= 0 ? "+" : ""}{change.toFixed(2)}%
             </Text>
           )}
@@ -70,23 +55,24 @@ function MarketRow({ label, value, change, loading: load }: { label: string; val
   );
 }
 
-export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, high24h, low24h, volume24h, suiBalance, usdcBalance, deepBalance, vault, trades, pnl, roi, count, loading }: Props) {
+export function AnalyticsScreen({
+  price, deepPrice, change24h, deepChange24h,
+  high24h, low24h, volume24h,
+  suiBalance, usdcBalance, deepBalance,
+  vault, trades, pnl, roi, count, loading,
+}: Props) {
   const { isDark } = useColorTheme();
   const { colors } = getTheme(isDark);
 
-  const spent    = vault?.spent ?? 0;
-  const budgetCap = vault?.budgetCap ?? 0;
-  const totalVal = suiBalance * price + usdcBalance + deepBalance * deepPrice;
-
-  const totalDeepAcc = trades.reduce((s, t) => s + Number(t.amount.replace("+", "").replace(" DEEP", "")), 0);
-  const totalSuiSpent = trades.reduce((s, t) => s + Number(t.value.replace(" SUI", "")), 0);
-  const avgBuyPrice = totalDeepAcc > 0 ? totalSuiSpent / totalDeepAcc : 0;
-  const currentDeepValSui = totalDeepAcc * (deepPrice / (price || 1));
-  const unrealisedSui = currentDeepValSui - totalSuiSpent;
+  const totalDeepAcc   = trades.reduce((s, t) => s + Number(t.amount.replace("+", "").replace(" DEEP", "")), 0);
+  const totalSuiSpent  = trades.reduce((s, t) => s + Number(t.value.replace(" SUI", "")), 0);
+  const avgBuyPrice    = totalDeepAcc > 0 ? totalSuiSpent / totalDeepAcc : 0;
+  const currentDeepVal = totalDeepAcc * (deepPrice / (price || 1));
+  const unrealisedSui  = currentDeepVal - totalSuiSpent;
 
   const allocs = [
-    { sym: "SUI",  usdVal: suiBalance * price,    color: "#6FBCF0" },
-    { sym: "USDC", usdVal: usdcBalance,            color: "#2775CA" },
+    { sym: "SUI",  usdVal: suiBalance * price,     color: "#6FBCF0" },
+    { sym: "USDC", usdVal: usdcBalance,             color: "#2775CA" },
     { sym: "DEEP", usdVal: deepBalance * deepPrice, color: colors.accent },
   ];
   const totalAlloc = allocs.reduce((s, a) => s + a.usdVal, 0) || 1;
@@ -95,65 +81,46 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
     <View style={[s.root, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Key stats */}
-        <View style={s.statGrid}>
-          <StatPill label="Total value"      value={usd(totalVal, 2)}              loading={loading} />
-          <StatPill label="Total trades"     value={String(count)}                  loading={loading} />
-          <StatPill label="Unrealised P&L"   value={`${pnl >= 0 ? "+" : ""}${usd(pnl, 4)}`}
-            color={pnl >= 0 ? colors.accent : colors.red}                           loading={loading} />
-          <StatPill label="ROI"              value={`${roi >= 0 ? "+" : ""}${roi.toFixed(2)}%`}
-            color={roi >= 0 ? colors.accent : colors.red}                           loading={loading} />
-          <StatPill label="DEEP accumulated" value={totalDeepAcc > 0 ? totalDeepAcc.toFixed(4) : "—"} loading={loading} />
-          <StatPill label="Avg buy price"    value={avgBuyPrice > 0 ? usd(avgBuyPrice, 6) : "—"}      loading={loading} />
+        {/* ── Market data ── */}
+        <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
+          <Text style={[s.panelTitle, { color: colors.text }]}>Market</Text>
+          <Row label="SUI / USDC"  value={usd(price, 4)}     change={change24h}     loading={loading} />
+          <Row label="DEEP / SUI"  value={usd(deepPrice, 6)} change={deepChange24h} loading={loading} />
+          <Row label="24h High"    value={usd(high24h, 4)}                          loading={loading} />
+          <Row label="24h Low"     value={usd(low24h, 4)}                           loading={loading} />
+          <Row
+            label="24h Volume"
+            value={volume24h > 0 ? usd(volume24h, 0) : "—"}
+            loading={loading}
+          />
         </View>
 
-        {/* Market data */}
+        {/* ── DCA performance ── */}
         <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-          <Text style={[s.panelTitle, { color: colors.text }]}>Market data</Text>
-          <MarketRow label="SUI / USDC"    value={usd(price, 4)}      change={change24h}     loading={loading} />
-          <MarketRow label="DEEP / SUI"    value={usd(deepPrice, 6)}  change={deepChange24h} loading={loading} />
-          <MarketRow label="24h High"      value={usd(high24h, 4)}                           loading={loading} />
-          <MarketRow label="24h Low"       value={usd(low24h, 4)}                            loading={loading} />
-          <MarketRow label="24h Volume"    value={volume24h > 0 ? usd(volume24h, 0) : "—"}  loading={loading} />
+          <Text style={[s.panelTitle, { color: colors.text }]}>DCA Performance</Text>
+          <Row label="Trade count"    value={String(count)}                                                         loading={loading} />
+          <Row label="Success rate"   value={count > 0 ? "100%" : "—"}                                             loading={loading} />
+          <Row label="Total invested" value={totalSuiSpent > 0 ? `${totalSuiSpent.toFixed(4)} SUI` : "—"}         loading={loading} />
+          <Row label="DEEP acquired"  value={totalDeepAcc > 0 ? `${totalDeepAcc.toFixed(4)} DEEP` : "—"}          loading={loading} />
+          <Row label="Avg buy price"  value={avgBuyPrice > 0 ? usd(avgBuyPrice, 6) : "—"}                         loading={loading} />
+          <Row label="Current value"  value={currentDeepVal > 0 ? `${currentDeepVal.toFixed(4)} SUI` : "—"}       loading={loading} />
+          <Row
+            label="Unrealised P&L"
+            value={unrealisedSui !== 0 ? `${unrealisedSui >= 0 ? "+" : ""}${unrealisedSui.toFixed(4)} SUI` : "—"}
+            valueColor={unrealisedSui >= 0 ? colors.accent : colors.red}
+            loading={loading}
+          />
+          <Row
+            label="ROI"
+            value={`${roi >= 0 ? "+" : ""}${roi.toFixed(2)}%`}
+            valueColor={roi >= 0 ? colors.accent : colors.red}
+            loading={loading}
+          />
         </View>
 
-        {/* Vault state */}
-        {vault && (
-          <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-            <Text style={[s.panelTitle, { color: colors.text }]}>Vault performance</Text>
-            <MarketRow label="Budget spent"   value={`${spent.toFixed(4)} SUI`}    />
-            <MarketRow label="Budget cap"     value={`${budgetCap.toFixed(4)} SUI`} />
-            <MarketRow label="Budget used"    value={`${budgetCap > 0 ? ((spent / budgetCap) * 100).toFixed(1) : 0}%`} />
-            <MarketRow label="Unrealised SUI" value={`${unrealisedSui >= 0 ? "+" : ""}${unrealisedSui.toFixed(4)} SUI`} />
-          </View>
-        )}
-
-        {/* DCA agent performance grid — matches website analytics 3-col / 9-cell grid */}
+        {/* ── Portfolio allocation ── */}
         <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-          <Text style={[s.panelTitle, { color: colors.text }]}>DCA agent performance</Text>
-          <View style={s.perfGrid}>
-            {[
-              { label: "Total invested",  val: `${totalSuiSpent.toFixed(4)} SUI` },
-              { label: "Budget cap",      val: `${budgetCap.toFixed(4)} SUI` },
-              { label: "Utilisation",     val: budgetCap > 0 ? `${((spent / budgetCap) * 100).toFixed(1)}%` : "—" },
-              { label: "DEEP accumulated",val: totalDeepAcc > 0 ? totalDeepAcc.toFixed(4) : "—" },
-              { label: "Current value",   val: totalDeepAcc > 0 ? `${currentDeepValSui.toFixed(4)} SUI` : "—" },
-              { label: "Unrealised P&L",  val: unrealisedSui !== 0 ? `${unrealisedSui >= 0 ? "+" : ""}${unrealisedSui.toFixed(4)}` : "—", accent: unrealisedSui >= 0 },
-              { label: "Trade count",     val: String(count) },
-              { label: "Success rate",    val: count > 0 ? "100%" : "—" },
-              { label: "Avg buy price",   val: avgBuyPrice > 0 ? usd(avgBuyPrice, 6) : "—" },
-            ].map(({ label, val, accent }) => (
-              <View key={label} style={[s.perfCell, { backgroundColor: colors.bgSoft, borderColor: colors.border }]}>
-                <Text style={[s.perfLabel, { color: colors.text3 }]}>{label}</Text>
-                <Text style={[s.perfVal, { color: accent ? colors.accent : colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{val}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Portfolio allocation */}
-        <View style={[s.panel, { backgroundColor: colors.bg3, borderColor: colors.border }]}>
-          <Text style={[s.panelTitle, { color: colors.text }]}>Portfolio allocation</Text>
+          <Text style={[s.panelTitle, { color: colors.text }]}>Allocation</Text>
           {allocs.map(({ sym, usdVal, color }) => {
             const pct = Math.round((usdVal / totalAlloc) * 100);
             return (
@@ -163,7 +130,7 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
                 <View style={[s.allocTrack, { backgroundColor: colors.bgSoft3 }]}>
                   <View style={[s.allocFill, { width: `${pct}%` as any, backgroundColor: color }]} />
                 </View>
-                <Text style={[s.allocPct, { color: colors.text2, fontFamily: "monospace" }]}>{pct}%</Text>
+                <Text style={[s.allocPct, { color: colors.text2 }]}>{pct}%</Text>
               </View>
             );
           })}
@@ -175,34 +142,22 @@ export function AnalyticsScreen({ price, deepPrice, change24h, deepChange24h, hi
   );
 }
 
-const sp = StyleSheet.create({
-  card:  { width: "48%", flexGrow: 1, borderRadius: 12, borderWidth: 1, padding: 14, gap: 4 },
-  label: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 },
-  value: { fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
-  sub:   { fontSize: 12, marginTop: 4 },
-});
-
-const mr = StyleSheet.create({
-  row:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth },
+const r = StyleSheet.create({
+  row:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   label:  { fontSize: 13 },
   value:  { fontSize: 14, fontWeight: "600" },
-  change: { fontSize: 12 },
+  change: { fontSize: 12, fontWeight: "500" },
 });
 
 const s = StyleSheet.create({
-  root:   { flex: 1 },
-  scroll: { padding: 16, gap: 14 },
-  statGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  root:      { flex: 1 },
+  scroll:    { padding: 16, gap: 14 },
   panel:     { borderRadius: 14, borderWidth: 1, padding: 16 },
-  panelTitle:{ fontSize: 15, fontWeight: "600", marginBottom: 12 },
-  allocRow:  { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
+  panelTitle:{ fontSize: 15, fontWeight: "700", marginBottom: 8 },
+  allocRow:  { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 11 },
   allocDot:  { width: 8, height: 8, borderRadius: 4 },
-  allocSym:  { fontSize: 13, fontWeight: "600", width: 40 },
+  allocSym:  { fontSize: 13, fontWeight: "600", width: 44 },
   allocTrack:{ flex: 1, height: 6, borderRadius: 3, overflow: "hidden" },
   allocFill: { height: "100%", borderRadius: 3 },
   allocPct:  { fontSize: 13, width: 36, textAlign: "right" },
-  perfGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
-  perfCell:  { width: "31%", flexGrow: 1, borderRadius: 10, borderWidth: 1, padding: 10, gap: 4 },
-  perfLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5 },
-  perfVal:   { fontSize: 12, fontWeight: "700" },
 });
