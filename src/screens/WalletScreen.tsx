@@ -85,21 +85,21 @@ export function WalletScreen({ price, deepPrice, suiBalance, usdcBalance, deepBa
             </View>
           </View>
 
-          {/* Full address — tappable to copy, wraps naturally */}
+          {/* Short address — tappable to copy */}
           {address ? (
             <Pressable style={s.addrRow} onPress={copy}>
-              <Text style={[s.addrFull, { color: colors.text3 }]} selectable={false}>
-                {address}
+              <Ionicons name="wallet-outline" size={13} color={colors.text3} />
+              <Text style={[s.addrFull, { color: colors.text2 }]}>
+                {`${address.slice(0, 6)}...${address.slice(-4)}`}
               </Text>
               <Ionicons
-                name={copied ? "checkmark-circle" : "copy-outline"}
-                size={14}
+                name={copied ? "checkmark" : "copy-outline"}
+                size={13}
                 color={copied ? colors.accent : colors.text3}
-                style={{ marginTop: 1 }}
               />
             </Pressable>
           ) : (
-            <Skeleton w="80%" h={13} />
+            <Skeleton w={120} h={13} />
           )}
         </LinearGradient>
 
@@ -211,8 +211,8 @@ const s = StyleSheet.create({
   netDot:   { width: 6, height: 6, borderRadius: 3 },
   netText:  { fontSize: 11, fontWeight: "600" },
 
-  addrRow:  { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  addrFull: { flex: 1, fontSize: 11, fontFamily: "monospace", lineHeight: 17 },
+  addrRow:  { flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start" },
+  addrFull: { fontSize: 13, fontFamily: "monospace" },
 
   // Card
   card:     { borderRadius: 16, borderWidth: 1, padding: 16 },
