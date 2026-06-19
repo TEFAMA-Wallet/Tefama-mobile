@@ -6,6 +6,23 @@ TEFAMA Mobile is the React Native / Expo companion to [TEFAMA Web](https://githu
 
 ---
 
+## Download
+
+<p align="center">
+  <a href="https://expo.dev/accounts/tevinprime66/projects/tefama-mobile/builds/d78ed8f7-5048-4145-9499-fdf56f993cd2">
+    <img src="https://img.shields.io/badge/Download%20APK-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android" height="44" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://expo.dev/accounts/tevinprime66/projects/tefama-mobile/builds/8d5203bb-f5f7-4641-b403-72e72ed5fa9a">
+    <img src="https://img.shields.io/badge/Download-iOS%20Simulator-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for iOS" height="44" />
+  </a>
+</p>
+
+> **Android** — tap the badge, download the APK, install directly on your phone.  
+> **iOS** — simulator build for Mac. Real-device build requires Apple Developer account.
+
+---
+
 ## Relationship to the Web App
 
 TEFAMA Mobile does **not** run its own backend. It connects directly to the same API that powers [tefama-website.vercel.app](https://tefama-website.vercel.app):
